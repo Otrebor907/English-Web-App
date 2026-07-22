@@ -41,40 +41,63 @@ def profile(request):
     return Response(UserSerializer(request.user).data)
 
 
+STATO_IN_PREPARAZIONE = "in_preparazione"
+STATI_LEZIONE_ESPOSTI = ["PUBBLICATA", "DA_SVILUPPARE"]
+
+
+def _lesson_summary_payload(lesson, user, completed):
+    """Riepilogo comune per una card lezione nel percorso."""
+    base = {
+        "id": lesson.id, "nome": lesson.nome, "descrizione": lesson.descrizione,
+        "area": lesson.area_id, "livello": lesson.livello_id, "durata_min": lesson.durata_min,
+        "priorita": lesson.priorita, "ordine_mvp": lesson.ordine_mvp,
+        "importanza_mvp": lesson.importanza_mvp_id,
+    }
+    if lesson.stato_id != "PUBBLICATA":
+        return {**base, "stato": STATO_IN_PREPARAZIONE, "in_preparazione": True,
+                "punteggio": 0, "prerequisiti_mancanti": []}
+    missing = missing_prerequisites(user, lesson, completed)
+    progress = Progresso.objects.filter(utente=user, lezione=lesson).first()
+    return {**base, "stato": lesson_state(user, lesson, completed),
+            "in_preparazione": False,
+            "punteggio": progress.punteggio if progress else 0,
+            "prerequisiti_mancanti": [{"id": item.id, "nome": item.nome} for item in missing]}
+
+
 @api_view(["GET"])
 def path_lessons(request):
     sync_progress(request.user)
-    lessons = Lezione.objects.filter(ordine_mvp__isnull=False, stato_id="PUBBLICATA").select_related(
-        "area", "livello", "difficolta", "importanza_mvp"
-    ).prefetch_related("prerequisiti").order_by("ordine_mvp")
+    lessons = Lezione.objects.filter(
+        ordine_mvp__isnull=False, stato_id__in=STATI_LEZIONE_ESPOSTI,
+    ).select_related("area", "livello", "difficolta", "importanza_mvp").prefetch_related("prerequisiti").order_by("ordine_mvp")
     completed = completed_lesson_ids(request.user)
-    payload = []
-    for lesson in lessons:
-        missing = missing_prerequisites(request.user, lesson, completed)
-        progress = Progresso.objects.filter(utente=request.user, lezione=lesson).first()
-        payload.append({
-            "id": lesson.id, "nome": lesson.nome, "descrizione": lesson.descrizione,
-            "area": lesson.area_id, "livello": lesson.livello_id, "durata_min": lesson.durata_min,
-            "priorita": lesson.priorita, "ordine_mvp": lesson.ordine_mvp,
-            "importanza_mvp": lesson.importanza_mvp_id,
-            "stato": lesson_state(request.user, lesson, completed),
-            "punteggio": progress.punteggio if progress else 0,
-            "prerequisiti_mancanti": [{"id": item.id, "nome": item.nome} for item in missing],
-        })
-    return Response(payload)
+    return Response([_lesson_summary_payload(lesson, request.user, completed) for lesson in lessons])
 
 
 @api_view(["GET"])
 def lesson_detail(request, lesson_id):
     lesson = get_object_or_404(
         Lezione.objects.select_related("area", "tipologia", "livello", "difficolta", "importanza_mvp").prefetch_related("sezioni", "quiz__quesiti"),
-        id=lesson_id, ordine_mvp__isnull=False, stato_id="PUBBLICATA",
+        id=lesson_id, ordine_mvp__isnull=False, stato_id__in=STATI_LEZIONE_ESPOSTI,
     )
+    if lesson.stato_id != "PUBBLICATA":
+        return Response({
+            "id": lesson.id, "area": lesson.area_id, "tipologia": lesson.tipologia.nome,
+            "nome": lesson.nome, "descrizione": lesson.descrizione,
+            "livello": lesson.livello_id, "difficolta": lesson.difficolta_id,
+            "ordine_percorso": lesson.ordine_percorso, "ordine_mvp": lesson.ordine_mvp,
+            "priorita": lesson.priorita, "obiettivo_didattico": lesson.obiettivo_didattico,
+            "competenze": lesson.competenze, "durata_min": lesson.durata_min,
+            "errori_tipici": lesson.errori_tipici,
+            "importanza_mvp": lesson.importanza_mvp_id, "fase_roadmap": lesson.fase_roadmap,
+            "sezioni": [], "quiz": [],
+            "in_preparazione": True, "stato_utente": STATO_IN_PREPARAZIONE,
+        })
     state = lesson_state(request.user, lesson)
     if state == Progresso.BLOCCATA:
         missing = [{"id": item.id, "nome": item.nome} for item in missing_prerequisites(request.user, lesson)]
         return Response({"detail": "Lezione bloccata", "prerequisiti_mancanti": missing}, status=status.HTTP_403_FORBIDDEN)
-    return Response({**LessonDetailSerializer(lesson).data, "stato_utente": state})
+    return Response({**LessonDetailSerializer(lesson).data, "in_preparazione": False, "stato_utente": state})
 
 
 @api_view(["POST"])
@@ -89,7 +112,12 @@ def start_lesson(request, lesson_id):
 
 @api_view(["POST"])
 def check_answer(request, lesson_id, question_id):
-    question = get_object_or_404(Quesito.objects.select_related("quiz__lezione"), id=question_id, quiz__lezione_id=lesson_id)
+    question = get_object_or_404(
+        Quesito.objects.select_related("quiz__lezione"),
+        id=question_id, quiz__lezione_id=lesson_id,
+        quiz__lezione__ordine_mvp__isnull=False,
+        quiz__lezione__stato_id="PUBBLICATA",
+    )
     if lesson_state(request.user, question.quiz.lezione) == Progresso.BLOCCATA:
         return Response({"detail": "Lezione bloccata"}, status=status.HTTP_403_FORBIDDEN)
     correct = _answer_matches(question, request.data.get("risposta"))

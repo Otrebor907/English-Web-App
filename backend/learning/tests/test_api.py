@@ -17,14 +17,14 @@ class ApiTests(APITestCase):
         response = self.client.get("/api/percorso/")
         self.assertEqual([item["ordine_mvp"] for item in response.data], [1, 2, 3])
         self.assertEqual(response.data[0]["priorita"], "P0")
-        vocabulary = next(item for item in response.data if item["id"] == "VOC-A1-001")
+        vocabulary = next(item for item in response.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(vocabulary["stato"], "bloccata")
-        self.assertEqual(vocabulary["prerequisiti_mancanti"][0]["id"], "GRA-A1-001")
+        self.assertEqual(vocabulary["prerequisiti_mancanti"][0]["id"], "DEMO-GRA-001")
 
     def test_final_quiz_is_scored_on_server(self):
-        questions = Quesito.objects.filter(quiz__lezione_id="GRA-A1-001", quiz__modalita="finale")
+        questions = Quesito.objects.filter(quiz__lezione_id="DEMO-GRA-001", quiz__modalita="finale")
         answers = {str(question.id): question.risposta_corretta for question in questions}
-        response = self.client.post("/api/lezioni/GRA-A1-001/quiz-finale/", {"risposte": answers}, format="json")
+        response = self.client.post("/api/lezioni/DEMO-GRA-001/quiz-finale/", {"risposte": answers}, format="json")
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["punteggio"], 100)
         self.assertTrue(response.data["superato"])
@@ -57,24 +57,24 @@ class FullUserJourneyTests(APITestCase):
         client.credentials(HTTP_AUTHORIZATION=f"Token {registration.data['token']}")
 
         initial_path = client.get("/api/percorso/")
-        grammar = next(item for item in initial_path.data if item["id"] == "GRA-A1-001")
-        vocabulary = next(item for item in initial_path.data if item["id"] == "VOC-A1-001")
+        grammar = next(item for item in initial_path.data if item["id"] == "DEMO-GRA-001")
+        vocabulary = next(item for item in initial_path.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(grammar["stato"], "disponibile")
         self.assertEqual(vocabulary["stato"], "bloccata")
 
-        lesson = client.get("/api/lezioni/GRA-A1-001/")
+        lesson = client.get("/api/lezioni/DEMO-GRA-001/")
         self.assertEqual(lesson.status_code, 200)
-        self.assertEqual(client.post("/api/lezioni/GRA-A1-001/inizia/").status_code, 200)
+        self.assertEqual(client.post("/api/lezioni/DEMO-GRA-001/inizia/").status_code, 200)
 
-        questions = Quesito.objects.filter(quiz__lezione_id="GRA-A1-001", quiz__modalita="finale")
+        questions = Quesito.objects.filter(quiz__lezione_id="DEMO-GRA-001", quiz__modalita="finale")
         answers = {str(question.id): question.risposta_corretta for question in questions}
-        result = client.post("/api/lezioni/GRA-A1-001/quiz-finale/", {"risposte": answers}, format="json")
+        result = client.post("/api/lezioni/DEMO-GRA-001/quiz-finale/", {"risposte": answers}, format="json")
         self.assertEqual(result.data["punteggio"], 100)
         self.assertEqual(result.data["stato"], "completata")
 
         unlocked_path = client.get("/api/percorso/")
-        vocabulary = next(item for item in unlocked_path.data if item["id"] == "VOC-A1-001")
+        vocabulary = next(item for item in unlocked_path.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(vocabulary["stato"], "disponibile")
         progress = client.get("/api/progressi/")
-        grammar_progress = next(item for item in progress.data if item["lezione_id"] == "GRA-A1-001")
+        grammar_progress = next(item for item in progress.data if item["lezione_id"] == "DEMO-GRA-001")
         self.assertEqual(grammar_progress["punteggio"], 100)

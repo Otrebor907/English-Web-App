@@ -17,24 +17,24 @@ class GraphValidationTests(SimpleTestCase):
 
     def test_missing_prerequisite_fails_loudly(self):
         edges = deepcopy(self.data["prerequisiti"])
-        edges.append({"lezione_id": "COM-A1-001", "richiede_lezione_id": "OUT-OF-SCOPE"})
+        edges.append({"lezione_id": "DEMO-COM-001", "richiede_lezione_id": "OUT-OF-SCOPE"})
         with self.assertRaisesRegex(GraphValidationError, "fuori perimetro o inesistente"):
             validate_lesson_graph(self.data["lezioni"], edges)
 
     def test_prerequisite_outside_mvp_fails_loudly(self):
         lessons = deepcopy(self.data["lezioni"])
-        next(row for row in lessons if row["id"] == "GRA-A1-001")["ordine_mvp"] = None
+        next(row for row in lessons if row["id"] == "DEMO-GRA-001")["ordine_mvp"] = None
         with self.assertRaisesRegex(GraphValidationError, "fuori perimetro MVP"):
             validate_lesson_graph(lessons, self.data["prerequisiti"])
 
     def test_future_prerequisite_fails_loudly(self):
-        edges = [{"lezione_id": "GRA-A1-001", "richiede_lezione_id": "VOC-A1-001"}]
+        edges = [{"lezione_id": "DEMO-GRA-001", "richiede_lezione_id": "DEMO-VOC-001"}]
         with self.assertRaisesRegex(GraphValidationError, "Ordine prerequisito non valido"):
             validate_lesson_graph(self.data["lezioni"], edges)
 
     def test_cycle_fails_loudly(self):
         edges = deepcopy(self.data["prerequisiti"])
-        edges.append({"lezione_id": "GRA-A1-001", "richiede_lezione_id": "COM-A1-001"})
+        edges.append({"lezione_id": "DEMO-GRA-001", "richiede_lezione_id": "DEMO-COM-001"})
         with self.assertRaisesRegex(GraphValidationError, "Ciclo nel grafo"):
             validate_lesson_graph(self.data["lezioni"], edges)
 
@@ -45,8 +45,8 @@ class GraphValidationTests(SimpleTestCase):
 
     def test_published_path_cannot_cross_an_unpublished_lesson(self):
         lessons = deepcopy(self.data["lezioni"])
-        next(row for row in lessons if row["id"] == "VOC-A1-001")["stato"] = "BOZZA"
-        with self.assertRaisesRegex(GraphValidationError, "COM-A1-001"):
+        next(row for row in lessons if row["id"] == "DEMO-VOC-001")["stato"] = "BOZZA"
+        with self.assertRaisesRegex(GraphValidationError, "DEMO-COM-001"):
             validate_lesson_graph(lessons, self.data["prerequisiti"])
 
 
