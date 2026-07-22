@@ -1,0 +1,14 @@
+{
+  "id": "GRA-A1-001",
+  "area": "GRA",
+  "tipologia": "Regola ed esercizi",
+  "nome": "L'ordine delle parole: Soggetto + Verbo + Oggetto",
+  "livello": "A1",
+  "difficolta": "Bassa",
+  "ordine_percorso": 1,
+  "ordine_mvp": 1,
+  "importanza_mvp": "Essenziale",
+  "priorita": "P0",
+  "fase_roadmap": "Fase 1",
+  "prerequisiti": []
+}
