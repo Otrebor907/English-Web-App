@@ -15,12 +15,24 @@ from .services import (
 )
 
 
+def _correct_variants(question):
+    """Risposte accettate. Per il completamento sono ammesse più varianti separate da « | »
+    (es. forma piena e contratta di una traduzione)."""
+    return [variant.strip() for variant in question.risposta_corretta.split("|") if variant.strip()]
+
+
 def _answer_matches(question, answer):
     if answer is None:
         return False
     if question.tipo == Quesito.COMPLETAMENTO:
-        return str(answer).strip().casefold() == question.risposta_corretta.strip().casefold()
+        given = str(answer).strip().casefold()
+        return any(given == variant.casefold() for variant in _correct_variants(question))
     return str(answer) == question.risposta_corretta
+
+
+def _display_answer(question):
+    """Risposta corretta leggibile: le varianti « | » diventano « / »."""
+    return " / ".join(_correct_variants(question)) or question.risposta_corretta
 
 
 @api_view(["POST"])
@@ -72,7 +84,8 @@ def _lesson_summary_payload(lesson, user, completed):
     """Riepilogo comune per una card lezione nel percorso."""
     base = {
         "id": lesson.id, "nome": lesson.nome, "descrizione": lesson.descrizione,
-        "area": lesson.area_id, "livello": lesson.livello_id, "durata_min": lesson.durata_min,
+        "area": lesson.area_id, "categoria": lesson.categoria,
+        "livello": lesson.livello_id, "durata_min": lesson.durata_min,
         "priorita": lesson.priorita, "ordine_mvp": lesson.ordine_mvp,
         "importanza_mvp": lesson.importanza_mvp_id,
     }
@@ -110,6 +123,7 @@ def lesson_index(request):
         in_prep = lesson.stato_id != "PUBBLICATA"
         by_area[lesson.area_id].append({
             "id": lesson.id, "nome": lesson.nome, "descrizione": lesson.descrizione,
+            "categoria": lesson.categoria,
             "livello": lesson.livello_id, "priorita": lesson.priorita, "durata_min": lesson.durata_min,
             "ordine_percorso": lesson.ordine_percorso, "in_preparazione": in_prep,
             "stato": None if not user else ("in_preparazione" if in_prep else lesson_state(user, lesson)),
@@ -131,7 +145,7 @@ def lesson_detail(request, lesson_id):
     if lesson.stato_id != "PUBBLICATA":
         return Response({
             "id": lesson.id, "area": lesson.area_id, "tipologia": lesson.tipologia.nome,
-            "nome": lesson.nome, "descrizione": lesson.descrizione,
+            "nome": lesson.nome, "descrizione": lesson.descrizione, "categoria": lesson.categoria,
             "livello": lesson.livello_id, "difficolta": lesson.difficolta_id,
             "ordine_percorso": lesson.ordine_percorso, "ordine_mvp": lesson.ordine_mvp,
             "priorita": lesson.priorita, "obiettivo_didattico": lesson.obiettivo_didattico,
@@ -180,7 +194,7 @@ def check_answer(request, lesson_id, question_id):
         quiz__lezione__stato_id="PUBBLICATA",
     )
     correct = _answer_matches(question, request.data.get("risposta"))
-    return Response({"corretta": correct, "risposta_corretta": question.risposta_corretta, "spiegazione": question.spiegazione})
+    return Response({"corretta": correct, "risposta_corretta": _display_answer(question), "spiegazione": question.spiegazione})
 
 
 @api_view(["POST"])
@@ -197,7 +211,7 @@ def submit_final_quiz(request, lesson_id):
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     details = [{
         "quesito_id": question.id, "corretta": _answer_matches(question, answers.get(str(question.id), answers.get(question.id))),
-        "risposta_corretta": question.risposta_corretta, "spiegazione": question.spiegazione,
+        "risposta_corretta": _display_answer(question), "spiegazione": question.spiegazione,
     } for question in questions]
     return Response({
         "punteggio": score, "miglior_punteggio": progress.punteggio,

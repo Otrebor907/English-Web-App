@@ -66,6 +66,18 @@ function Layout({ children }) {
   </>
 }
 
+/** Raggruppa una lista di lezioni (già ordinate per ordine_percorso) per categoria,
+ *  preservando l'ordine di prima comparsa. Ritorna [{ categoria, items }]. */
+function groupByCategoria(lessons) {
+  const groups = new Map()
+  for (const lesson of lessons) {
+    const key = lesson.categoria || 'Altro'
+    if (!groups.has(key)) groups.set(key, [])
+    groups.get(key).push(lesson)
+  }
+  return [...groups.entries()].map(([categoria, items]) => ({ categoria, items }))
+}
+
 function LessonSidebar() {
   const { data } = useLoad(() => api('/lezioni/indice/'))
   if (!data) return null
@@ -78,18 +90,26 @@ function LessonSidebar() {
           <span>{area.label}</span>
           <span className="side-count" aria-hidden="true">{lessons.length}</span>
         </summary>
-        <ul>
-          {lessons.map(lesson => (
-            <li key={lesson.id}>
-              <Link className="side-link" to={`/lezioni/${lesson.id}`}>
-                <span className="side-link-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</span>
-                <span className="side-link-name">{lesson.nome}</span>
-                {lesson.stato === 'completata' && <span className="side-link-flag done" aria-label="Completata">✓</span>}
-                {lesson.in_preparazione && <span className="side-link-flag prep" aria-label="In preparazione">…</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
+        {groupByCategoria(lessons).map(({ categoria, items }) => (
+          <details key={categoria} className="side-subgroup" open>
+            <summary>
+              <span className="side-subgroup-name">{categoria}</span>
+              <span className="side-count" aria-hidden="true">{items.length}</span>
+            </summary>
+            <ul>
+              {items.map(lesson => (
+                <li key={lesson.id}>
+                  <Link className="side-link" to={`/lezioni/${lesson.id}`}>
+                    <span className="side-link-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</span>
+                    <span className="side-link-name">{lesson.nome}</span>
+                    {lesson.stato === 'completata' && <span className="side-link-flag done" aria-label="Completata">✓</span>}
+                    {lesson.in_preparazione && <span className="side-link-flag prep" aria-label="In preparazione">…</span>}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
       </details>
     })}
   </nav>
@@ -280,7 +300,14 @@ export function ErrorBox({ wrong, right, why, className = '' }) {
 function Section({ section }) {
   const content = section.contenuto || {}
   if (section.formato_web === 'errore_box') {
-    return <ErrorBox wrong={content.errato} right={content.corretto} why={content.perche} />
+    // Supporta sia il box singolo storico sia una lista di errori (content.errori).
+    const errori = Array.isArray(content.errori) && content.errori.length
+      ? content.errori
+      : [{ errato: content.errato, corretto: content.corretto, perche: content.perche }]
+    return <div className="content-section">
+      {content.titolo && <><span className="section-label">{section.tipo_sezione}</span><h2>{content.titolo}</h2></>}
+      {errori.map((e, i) => <ErrorBox key={i} wrong={e.errato} right={e.corretto} why={e.perche} />)}
+    </div>
   }
   if (section.formato_web === 'lista') {
     return <div className="content-section">
@@ -431,10 +458,12 @@ function InPreparationLesson({ lesson }) {
   const area = AREA[lesson.area] || AREA.GRA
   return <div className={`lesson-page ${area.className}`}>
     <div className="lesson-hero">
+     <div className="lesson-hero-inner">
       <Link className="back" to="/lezioni">← Lezioni</Link>
-      <span className="eyebrow">{area.label} · {lesson.livello}</span>
+      <span className="eyebrow">{area.label} · {lesson.livello}{lesson.categoria ? ` · ${lesson.categoria}` : ''}</span>
       <h1>{lesson.nome}</h1>
       <p>{lesson.descrizione}</p>
+     </div>
     </div>
     <div className="lesson-content in-prep-shell">
       <div className="in-prep-card" role="status" aria-live="polite">
@@ -453,15 +482,66 @@ function InPreparationLesson({ lesson }) {
   </div>
 }
 
+function LessonCard({ lesson, index, user }) {
+  const area = AREA[lesson.area] || AREA.GRA
+  const inPrep = lesson.in_preparazione
+  const cardClass = `lesson-card ${area.className} ${inPrep ? 'in-prep' : ''}`.trim()
+  return <article className={cardClass} style={{ '--i': index }} aria-labelledby={`lc-${lesson.id}`}>
+    <div className={`area-icon ${area.className}`} aria-hidden="true">
+      {inPrep ? '…' : area.icon}
+    </div>
+    <div className="lesson-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</div>
+    <div className="lesson-main">
+      <div className="lesson-meta">
+        <span>{area.label}</span>
+        {lesson.categoria && <span>{lesson.categoria}</span>}
+        <span>{lesson.livello}</span>
+        <span>{lesson.durata_min} min</span>
+      </div>
+      <h2 id={`lc-${lesson.id}`}>{lesson.nome}</h2>
+      <p>{lesson.descrizione}</p>
+      {inPrep && (
+        <p className="in-prep-note">Struttura editoriale definita, contenuti in arrivo.</p>
+      )}
+    </div>
+    <div className="lesson-action">
+      {user && lesson.stato && <StatusPill status={lesson.stato} />}
+      {user && lesson.assegnata && <span className="status assegnata">Nel percorso</span>}
+      {!inPrep && (
+        <Link className="arrow" aria-label={`Apri ${lesson.nome}`} to={`/lezioni/${lesson.id}`}>→</Link>
+      )}
+      {inPrep && (
+        <Link className="arrow prep" aria-label={`Apri anteprima di ${lesson.nome}`} to={`/lezioni/${lesson.id}`}>i</Link>
+      )}
+    </div>
+  </article>
+}
+
 function LessonsPage() {
   const { user } = useContext(AuthContext)
   const { loading, data, error } = useLoad(() => api('/lezioni/indice/'))
-  const [filter, setFilter] = useState('TUTTE')
+  const [area, setArea] = useState('TUTTE')
+  const [categoria, setCategoria] = useState('TUTTE')
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
+
   const lessons = Object.entries(data).flatMap(([code, items]) => items.map(item => ({ ...item, area: code })))
   const assignedCount = lessons.filter(item => item.assegnata).length
-  const filtered = filter === 'TUTTE' ? lessons : lessons.filter(item => item.area === filter)
+
+  // Il filtro Categoria è a cascata: dipende dall'area selezionata.
+  const selectArea = (code) => { setArea(code); setCategoria('TUTTE') }
+  const categoriesForArea = area === 'TUTTE'
+    ? []
+    : [...new Set(lessons.filter(l => l.area === area).map(l => l.categoria).filter(Boolean))]
+
+  let filtered = lessons
+  if (area !== 'TUTTE') filtered = filtered.filter(l => l.area === area)
+  if (categoria !== 'TUTTE') filtered = filtered.filter(l => l.categoria === categoria)
+
+  // Quando è selezionata un'area ma non una categoria specifica, mostro le lezioni
+  // raggruppate per categoria così la gerarchia resta visibile.
+  const grouped = area !== 'TUTTE' && categoria === 'TUTTE'
+
   return <div className="page">
     <div className="page-heading">
       <div>
@@ -474,57 +554,55 @@ function LessonsPage() {
         <strong>{assignedCount}</strong><span>nel percorso</span>
       </div>}
     </div>
-    <div className="filter-row" role="group" aria-label="Filtra per area">
-      <button type="button" className={`filter-chip ${filter === 'TUTTE' ? 'active' : ''}`} aria-pressed={filter === 'TUTTE'} onClick={() => setFilter('TUTTE')}>Tutte</button>
-      {Object.entries(AREA).map(([code, area]) => (
-        <button
-          key={code}
-          type="button"
-          className={`filter-chip ${area.className} ${filter === code ? 'active' : ''}`}
-          aria-pressed={filter === code}
-          onClick={() => setFilter(code)}
-        >{area.label}</button>
-      ))}
+
+    <div className="filters">
+      <div className="filter-row" role="group" aria-label="Filtra per area">
+        <button type="button" className={`filter-chip ${area === 'TUTTE' ? 'active' : ''}`} aria-pressed={area === 'TUTTE'} onClick={() => selectArea('TUTTE')}>Tutte</button>
+        {Object.entries(AREA).map(([code, info]) => (
+          <button
+            key={code}
+            type="button"
+            className={`filter-chip ${info.className} ${area === code ? 'active' : ''}`}
+            aria-pressed={area === code}
+            onClick={() => selectArea(code)}
+          >{info.label}</button>
+        ))}
+      </div>
+      {categoriesForArea.length > 0 && (
+        <div className="filter-row filter-row-sub" role="group" aria-label="Filtra per categoria">
+          <span className="filter-label" aria-hidden="true">Categoria</span>
+          <button type="button" className={`filter-chip ${categoria === 'TUTTE' ? 'active' : ''}`} aria-pressed={categoria === 'TUTTE'} onClick={() => setCategoria('TUTTE')}>Tutte le categorie</button>
+          {categoriesForArea.map(cat => (
+            <button
+              key={cat}
+              type="button"
+              className={`filter-chip ${categoria === cat ? 'active' : ''}`}
+              aria-pressed={categoria === cat}
+              onClick={() => setCategoria(cat)}
+            >{cat}</button>
+          ))}
+        </div>
+      )}
     </div>
-    {filtered.length === 0 && <p className="empty">Nessuna lezione in quest'area.</p>}
-    <ul className="lesson-list" aria-label="Elenco lezioni">
-      {filtered.map((lesson, index) => {
-        const area = AREA[lesson.area] || AREA.GRA
-        const inPrep = lesson.in_preparazione
-        const cardClass = `lesson-card ${area.className} ${inPrep ? 'in-prep' : ''}`.trim()
-        return <li key={lesson.id}>
-          <article className={cardClass} style={{ '--i': index }} aria-labelledby={`lc-${lesson.id}`}>
-            <div className={`area-icon ${area.className}`} aria-hidden="true">
-              {inPrep ? '…' : area.icon}
-            </div>
-            <div className="lesson-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</div>
-            <div className="lesson-main">
-              <div className="lesson-meta">
-                <span>{area.label}</span>
-                <span>{lesson.livello}</span>
-                <span>{lesson.priorita}</span>
-                <span>{lesson.durata_min} min</span>
-              </div>
-              <h2 id={`lc-${lesson.id}`}>{lesson.nome}</h2>
-              <p>{lesson.descrizione}</p>
-              {inPrep && (
-                <p className="in-prep-note">Struttura editoriale definita, contenuti in arrivo.</p>
-              )}
-            </div>
-            <div className="lesson-action">
-              {user && lesson.stato && <StatusPill status={lesson.stato} />}
-              {user && lesson.assegnata && <span className="status assegnata">Nel percorso</span>}
-              {!inPrep && (
-                <Link className="arrow" aria-label={`Apri ${lesson.nome}`} to={`/lezioni/${lesson.id}`}>→</Link>
-              )}
-              {inPrep && (
-                <Link className="arrow prep" aria-label={`Apri anteprima di ${lesson.nome}`} to={`/lezioni/${lesson.id}`}>i</Link>
-              )}
-            </div>
-          </article>
-        </li>
-      })}
-    </ul>
+
+    {filtered.length === 0 && <p className="empty">Nessuna lezione con questi filtri.</p>}
+
+    {grouped
+      ? groupByCategoria(filtered).map(({ categoria: cat, items }) => (
+          <section key={cat} className="lesson-group" aria-label={cat}>
+            <h2 className="lesson-group-heading">{cat} <span className="lesson-group-count">{items.length}</span></h2>
+            <ul className="lesson-list">
+              {items.map((lesson, index) => (
+                <li key={lesson.id}><LessonCard lesson={lesson} index={index} user={user} /></li>
+              ))}
+            </ul>
+          </section>
+        ))
+      : <ul className="lesson-list" aria-label="Elenco lezioni">
+          {filtered.map((lesson, index) => (
+            <li key={lesson.id}><LessonCard lesson={lesson} index={index} user={user} /></li>
+          ))}
+        </ul>}
   </div>
 }
 
@@ -564,8 +642,9 @@ function LessonPage() {
 
   return <div className={`lesson-page ${area.className}`}>
     <div className="lesson-hero">
+     <div className="lesson-hero-inner">
       <Link className="back" to="/lezioni">← Lezioni</Link>
-      <span className="eyebrow">{area.label} · {lesson.livello}</span>
+      <span className="eyebrow">{area.label} · {lesson.livello}{lesson.categoria ? ` · ${lesson.categoria}` : ''}</span>
       <h1>{lesson.nome}</h1>
       <p>{lesson.obiettivo_didattico}</p>
       <div className="hero-meta" aria-label="Dettagli lezione">
@@ -591,6 +670,7 @@ function LessonPage() {
           </span>
         </div>
       )}
+     </div>
     </div>
     <div className="lesson-content">
       {hasSections && <SectionList sezioni={lesson.sezioni} />}

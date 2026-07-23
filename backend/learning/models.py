@@ -82,6 +82,7 @@ class Lezione(models.Model):
     tipologia = models.ForeignKey(Tipologia, on_delete=models.PROTECT)
     nome = models.CharField(max_length=200)
     descrizione = models.TextField(blank=True)
+    categoria = models.CharField(max_length=120, blank=True, default="")
     livello = models.ForeignKey(Livello, on_delete=models.PROTECT)
     difficolta = models.ForeignKey(Difficolta, on_delete=models.PROTECT)
     ordine_percorso = models.PositiveIntegerField(

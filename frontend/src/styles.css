@@ -132,8 +132,33 @@ main { min-height: calc(100vh - 150px) }
 .side-link-flag.done { color: var(--color-mint-deep) }
 .side-link-flag.prep { color: var(--color-ink-2) }
 
+/* ---------- Sotto-gruppo Categoria nella sidebar (Area → Categoria → Lezione) ---------- */
+.side-subgroup { margin: var(--space-2xs) 0 var(--space-xs) }
+.side-subgroup > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;
+  gap: var(--space-xs); padding: var(--space-2xs) 0 var(--space-2xs) var(--space-sm);
+  font-weight: 600; font-size: 0.78rem; letter-spacing: 0.02em; text-transform: uppercase; color: var(--color-ink-2);
+  border-left: 2px solid var(--color-rule);
+}
+.side-subgroup > summary::-webkit-details-marker { display: none }
+.side-subgroup > summary::after {
+  content: '›'; font-weight: 400; color: var(--color-muted); transform: rotate(90deg);
+  transition: transform var(--dur-short) var(--ease-out);
+}
+.side-subgroup[open] > summary::after { transform: rotate(-90deg) }
+.side-subgroup-name { flex: 1 1 auto; overflow-wrap: anywhere; min-width: 0 }
+.side-subgroup ul { padding-left: var(--space-sm); border-left: 2px solid var(--color-rule) }
+
 /* ---------- Filtro per area (percorso) ---------- */
+.filters { margin-bottom: var(--space-lg) }
 .filter-row { display: flex; gap: var(--space-sm); flex-wrap: wrap; margin-bottom: var(--space-lg) }
+.filter-row-sub { align-items: center; margin-top: calc(-1 * var(--space-sm)); margin-bottom: 0; padding-top: var(--space-sm); border-top: 1px dashed var(--color-rule) }
+.filter-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-2); margin-right: var(--space-2xs) }
+
+/* ---------- Gruppi di lezioni per categoria nel catalogo ---------- */
+.lesson-group { margin-bottom: var(--space-xl) }
+.lesson-group-heading { display: flex; align-items: center; gap: var(--space-sm); font-size: 1.15rem; margin-bottom: var(--space-md) }
+.lesson-group-count { font-size: 0.7rem; font-weight: 600; color: var(--color-ink-2); background: var(--color-paper-2); padding: var(--space-3xs) var(--space-xs); border-radius: var(--radius-pill) }
 .filter-chip {
   padding: var(--space-2xs) var(--space-md); border-radius: var(--radius-pill); border: 1px solid var(--color-rule);
   background: var(--color-paper); color: var(--color-ink-2); font-weight: 600; font-size: 0.85rem; white-space: nowrap;
@@ -284,7 +309,10 @@ footer {
 .field-success { color: var(--color-mint-deep); font-weight: 600 }
 
 /* ---------- Pagina lezione ---------- */
-.lesson-hero { color: var(--color-ink); padding: var(--space-2xl) max(var(--space-md), calc((100vw - 900px) / 2)); background: color-mix(in oklch, var(--color-mint) 18%, var(--color-paper)); min-height: 260px }
+/* L'hero vive dentro la griglia con sidebar: la spaziatura è relativa al contenitore,
+   NON a 100vw, e il contenuto è incolonnato come .lesson-content per allineare i bordi. */
+.lesson-hero { color: var(--color-ink); padding: var(--space-2xl) var(--space-md); background: color-mix(in oklch, var(--color-mint) 18%, var(--color-paper)); min-height: 260px }
+.lesson-hero-inner { max-width: 780px; margin-inline: auto }
 .lesson-page.vocabulary .lesson-hero { background: color-mix(in oklch, var(--color-accent) 18%, var(--color-paper)) }
 .lesson-page.communication .lesson-hero { background: color-mix(in oklch, var(--color-accent-2) 18%, var(--color-paper)) }
 .lesson-hero .eyebrow { background: var(--color-paper); color: var(--color-ink-2) }

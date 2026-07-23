@@ -168,7 +168,7 @@ def _load_programma_workbook(workbook):
 
     lessons = []
     prerequisites = []
-    for row in _sheet_rows_at(workbook["Programma Lezioni"], 4, 16):
+    for row in _sheet_rows_at(workbook["Programma Lezioni"], 4, 17):
         lesson_id = row.get("ID Lezione")
         if not lesson_id:
             continue
@@ -186,6 +186,7 @@ def _load_programma_workbook(workbook):
             "tipologia": _code(row["Tipologia Lezione"]),
             "nome": str(row["Nome Lezione"]),
             "descrizione": str(row.get("Breve Descrizione") or ""),
+            "categoria": str(row.get("Categoria") or "").strip(),
             "livello": str(row["Livello Linguistico"]),
             "difficolta": str(row["Difficoltà"]),
             "ordine_percorso": int(row["Ordine nel Percorso"]),
@@ -441,7 +442,7 @@ def import_content(path):
     for row in data["lezioni"]:
         source_ids.append(row["id"])
         defaults = {key: row.get(key, "") for key in (
-            "nome", "descrizione", "ordine_percorso", "obiettivo_didattico", "competenze",
+            "nome", "descrizione", "categoria", "ordine_percorso", "obiettivo_didattico", "competenze",
             "durata_min", "errori_tipici", "priorita", "ordine_mvp", "fase_roadmap",
         )}
         defaults.update({

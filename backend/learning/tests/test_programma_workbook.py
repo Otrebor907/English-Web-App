@@ -24,6 +24,16 @@ class ProgrammaWorkbookTests(SimpleTestCase):
         self.assertEqual(self.data["quiz"], [])
         self.assertTrue(all(section["contenuto"]["todo"].startswith("TODO_FONTE:") for section in self.data["sezioni"]))
 
+    def test_categoria_is_mapped_for_every_lesson(self):
+        lessons = {row["id"]: row for row in self.data["lezioni"]}
+        # Ogni lezione del workbook ha una categoria (livello intermedio area → categoria → lezione).
+        self.assertTrue(all(row.get("categoria") for row in self.data["lezioni"]))
+        # Lezioni sullo stesso argomento condividono la stessa categoria esatta.
+        self.assertEqual(lessons["GRA-A1-003"]["categoria"], "Il verbo to be")
+        self.assertEqual(lessons["GRA-A1-004"]["categoria"], "Il verbo to be")
+        self.assertEqual(lessons["GRA-A2-001"]["categoria"], "Past simple")
+        self.assertEqual(lessons["GRA-A2-004"]["categoria"], "Past simple")
+
     def test_gra_a1_008_is_included_and_real_source_dag_passes(self):
         lessons = {row["id"]: row for row in self.data["lezioni"]}
         self.assertEqual(lessons["GRA-A1-008"]["ordine_mvp"], 11)

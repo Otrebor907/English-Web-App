@@ -92,7 +92,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Lezione
         fields = [
-            "id", "area", "tipologia", "nome", "descrizione", "livello", "difficolta",
+            "id", "area", "tipologia", "nome", "descrizione", "categoria", "livello", "difficolta",
             "ordine_percorso", "priorita", "ordine_mvp", "obiettivo_didattico", "competenze", "durata_min",
             "errori_tipici", "importanza_mvp", "fase_roadmap", "sezioni", "quiz",
         ]
