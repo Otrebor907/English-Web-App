@@ -38,6 +38,28 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["id", "email", "creato_il", "is_staff"]
 
 
+class ProfileUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        fields = ["email"]
+
+    def validate_email(self, value):
+        value = value.strip().lower()
+        if User.objects.exclude(pk=self.instance.pk).filter(email=value).exists():
+            raise serializers.ValidationError("Questa email è già in uso.")
+        return value
+
+
+class ChangePasswordSerializer(serializers.Serializer):
+    password_attuale = serializers.CharField(write_only=True)
+    nuova_password = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_password_attuale(self, value):
+        if not self.context["request"].user.check_password(value):
+            raise serializers.ValidationError("Password attuale non corretta.")
+        return value
+
+
 class SectionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SezioneLezione
@@ -82,4 +104,4 @@ class ProgressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Progresso
-        fields = ["lezione_id", "lezione_nome", "stato", "punteggio", "completata_il", "minuti_effettivi"]
+        fields = ["lezione_id", "lezione_nome", "stato", "punteggio", "completata_il", "minuti_effettivi", "assegnata"]

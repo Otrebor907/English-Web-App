@@ -22,11 +22,11 @@ class ImportAndProgressTests(TestCase):
         self.assertSetEqual(set(Area.objects.values_list("code", flat=True)), {"GRA", "VOC", "COM"})
         self.assertEqual(Lezione.objects.get(id="DEMO-GRA-001").priorita, "P0")
 
-    def test_unlock_requires_all_prerequisites(self):
+    def test_lessons_are_never_locked_by_prerequisites(self):
         grammar = Lezione.objects.get(id="DEMO-GRA-001")
         vocabulary = Lezione.objects.get(id="DEMO-VOC-001")
         self.assertEqual(lesson_state(self.user, grammar), Progresso.DISPONIBILE)
-        self.assertEqual(lesson_state(self.user, vocabulary), Progresso.BLOCCATA)
+        self.assertEqual(lesson_state(self.user, vocabulary), Progresso.DISPONIBILE)
         record_final_score(self.user, grammar, 75)
         self.assertEqual(lesson_state(self.user, vocabulary), Progresso.DISPONIBILE)
 

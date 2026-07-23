@@ -91,40 +91,29 @@ def completed_lesson_ids(user):
     return set(Progresso.objects.filter(utente=user, stato=Progresso.COMPLETATA).values_list("lezione_id", flat=True))
 
 
-def lesson_state(user, lesson, completed=None):
-    completed = completed if completed is not None else completed_lesson_ids(user)
+def lesson_state(user, lesson):
+    """Stato di avanzamento dell'utente sulla lezione. Le lezioni non sono mai bloccate:
+    i prerequisiti restano un ordine consigliato (vedi missing_prerequisites), non un cancello."""
     progress = Progresso.objects.filter(utente=user, lezione=lesson).first()
     if progress and progress.stato == Progresso.COMPLETATA:
         return Progresso.COMPLETATA
-    required = set(lesson.vincoli.values_list("richiede_lezione_id", flat=True))
-    if not required.issubset(completed):
-        return Progresso.BLOCCATA
     return progress.stato if progress and progress.stato == Progresso.IN_CORSO else Progresso.DISPONIBILE
 
 
 def missing_prerequisites(user, lesson, completed=None):
+    """Prerequisiti consigliati non ancora completati — informativo, non blocca l'accesso."""
     completed = completed if completed is not None else completed_lesson_ids(user)
     return lesson.prerequisiti.exclude(id__in=completed).order_by("ordine_mvp", "ordine_percorso")
 
 
 @transaction.atomic
 def sync_progress(user):
-    """Persist every state while recomputing locked/available from the DAG."""
-    completed = completed_lesson_ids(user)
-    for lesson in Lezione.objects.filter(ordine_mvp__isnull=False, stato_id="PUBBLICATA").prefetch_related("vincoli"):
-        progress, _ = Progresso.objects.get_or_create(utente=user, lezione=lesson)
-        if progress.stato in {Progresso.COMPLETATA, Progresso.IN_CORSO}:
-            continue
-        required = set(lesson.vincoli.values_list("richiede_lezione_id", flat=True))
-        expected = Progresso.DISPONIBILE if required.issubset(completed) else Progresso.BLOCCATA
-        if progress.stato != expected:
-            progress.stato = expected
-            progress.save(update_fields=["stato"])
+    """Garantisce un record di progresso per ogni lezione MVP pubblicata."""
+    for lesson in Lezione.objects.filter(ordine_mvp__isnull=False, stato_id="PUBBLICATA"):
+        Progresso.objects.get_or_create(utente=user, lezione=lesson)
 
 
 def mark_in_progress(user, lesson):
-    if lesson_state(user, lesson) == Progresso.BLOCCATA:
-        raise ValueError("La lezione è bloccata dai prerequisiti")
     progress, _ = Progresso.objects.get_or_create(utente=user, lezione=lesson)
     if progress.stato != Progresso.COMPLETATA:
         progress.stato = Progresso.IN_CORSO
@@ -132,16 +121,38 @@ def mark_in_progress(user, lesson):
     return progress
 
 
+def assigned_lesson_ids(user):
+    """Lezioni che l'utente ha aggiunto al proprio percorso personale."""
+    return set(Progresso.objects.filter(utente=user, assegnata=True).values_list("lezione_id", flat=True))
+
+
+def assign_lesson(user, lesson):
+    """Aggiunge la lezione al percorso personale — organizzativo, non un cancello d'accesso."""
+    progress, _ = Progresso.objects.get_or_create(utente=user, lezione=lesson)
+    if not progress.assegnata:
+        progress.assegnata = True
+        progress.save(update_fields=["assegnata"])
+    return progress
+
+
+def unassign_lesson(user, lesson):
+    """Rimuove la lezione dal percorso personale. Punteggio e cronologia restano intatti."""
+    progress = Progresso.objects.filter(utente=user, lezione=lesson).first()
+    if progress and progress.assegnata:
+        progress.assegnata = False
+        progress.save(update_fields=["assegnata"])
+    return progress
+
+
 @transaction.atomic
 def record_final_score(user, lesson, score, minutes=0):
-    if lesson_state(user, lesson) == Progresso.BLOCCATA:
-        raise ValueError("La lezione è bloccata dai prerequisiti")
     progress, _ = Progresso.objects.get_or_create(utente=user, lezione=lesson)
     progress.punteggio = max(progress.punteggio, score)
     progress.minuti_effettivi += max(0, minutes)
     if score >= PASS_THRESHOLD:
         progress.stato = Progresso.COMPLETATA
         progress.completata_il = progress.completata_il or timezone.now()
+        progress.assegnata = True  # completare un esercizio propone automaticamente la lezione nel percorso
     elif progress.stato != Progresso.COMPLETATA:
         progress.stato = Progresso.IN_CORSO
     progress.save()

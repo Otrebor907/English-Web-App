@@ -1,0 +1,705 @@
+{
+  "source": "programma_lezioni_inglese_no_audio.xlsx",
+  "generated_at": "2026-07-22T12:51:39.212Z",
+  "lesson_count": 98,
+  "counts_by_area": {
+    "Grammatica": 57,
+    "Comunicazione": 24,
+    "Vocabolario": 17
+  },
+  "counts_by_level": {
+    "A1": 28,
+    "A2": 23,
+    "B1": 21,
+    "B2": 15,
+    "C1": 11
+  },
+  "lessons": [
+    {
+      "id": "GRA-A1-001",
+      "order": 1,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "L'ordine delle parole: Soggetto + Verbo + Oggetto"
+    },
+    {
+      "id": "GRA-A1-002",
+      "order": 2,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "I pronomi personali: soggetto e complemento"
+    },
+    {
+      "id": "GRA-A1-003",
+      "order": 3,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Il verbo to be: forma affermativa"
+    },
+    {
+      "id": "GRA-A1-004",
+      "order": 4,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Il verbo to be: negativa e interrogativa"
+    },
+    {
+      "id": "COM-A1-001",
+      "order": 5,
+      "level": "A1",
+      "area": "Comunicazione",
+      "title": "Presentarsi e salutare"
+    },
+    {
+      "id": "VOC-A1-001",
+      "order": 6,
+      "level": "A1",
+      "area": "Vocabolario",
+      "title": "Numeri, giorni, mesi e orari"
+    },
+    {
+      "id": "GRA-A1-005",
+      "order": 7,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Gli articoli a, an e the: le basi"
+    },
+    {
+      "id": "GRA-A1-006",
+      "order": 8,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Il plurale dei sostantivi (e i plurali irregolari)"
+    },
+    {
+      "id": "VOC-A1-002",
+      "order": 9,
+      "level": "A1",
+      "area": "Vocabolario",
+      "title": "Famiglia e descrizione delle persone"
+    },
+    {
+      "id": "GRA-A1-007",
+      "order": 10,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Aggettivi possessivi e genitivo sassone"
+    },
+    {
+      "id": "GRA-A1-008",
+      "order": 11,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Dimostrativi: this, that, these, those"
+    },
+    {
+      "id": "GRA-A1-009",
+      "order": 12,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "There is e there are"
+    },
+    {
+      "id": "VOC-A1-003",
+      "order": 13,
+      "level": "A1",
+      "area": "Vocabolario",
+      "title": "Casa e oggetti quotidiani"
+    },
+    {
+      "id": "GRA-A1-010",
+      "order": 14,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Have got per possesso e caratteristiche"
+    },
+    {
+      "id": "GRA-A1-011",
+      "order": 15,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Present simple: forma affermativa"
+    },
+    {
+      "id": "GRA-A1-012",
+      "order": 16,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Present simple: negazioni e domande con do/does"
+    },
+    {
+      "id": "GRA-A1-013",
+      "order": 17,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Gli avverbi di frequenza e la loro posizione"
+    },
+    {
+      "id": "COM-A1-004",
+      "order": 18,
+      "level": "A1",
+      "area": "Comunicazione",
+      "title": "Parlare di sé: chi sono, cosa faccio"
+    },
+    {
+      "id": "GRA-A1-014",
+      "order": 19,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Le question words: who, what, where, when, why, how"
+    },
+    {
+      "id": "GRA-A1-015",
+      "order": 20,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Can e can't: abilità, permesso e richieste"
+    },
+    {
+      "id": "COM-A1-002",
+      "order": 21,
+      "level": "A1",
+      "area": "Comunicazione",
+      "title": "Al bar: ordinare da bere e da mangiare"
+    },
+    {
+      "id": "VOC-A1-004",
+      "order": 22,
+      "level": "A1",
+      "area": "Vocabolario",
+      "title": "Cibo, bevande e pasti"
+    },
+    {
+      "id": "GRA-A1-016",
+      "order": 23,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Le preposizioni di tempo e luogo: in, on, at"
+    },
+    {
+      "id": "COM-A1-003",
+      "order": 24,
+      "level": "A1",
+      "area": "Comunicazione",
+      "title": "In hotel: fare il check-in"
+    },
+    {
+      "id": "GRA-A1-017",
+      "order": 25,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Present continuous: azioni in corso"
+    },
+    {
+      "id": "GRA-A1-018",
+      "order": 26,
+      "level": "A1",
+      "area": "Grammatica",
+      "title": "Present simple o present continuous?"
+    },
+    {
+      "id": "COM-A1-005",
+      "order": 27,
+      "level": "A1",
+      "area": "Comunicazione",
+      "title": "Descrivere la propria routine quotidiana"
+    },
+    {
+      "id": "VOC-A1-005",
+      "order": 28,
+      "level": "A1",
+      "area": "Vocabolario",
+      "title": "Falsi amici essenziali"
+    },
+    {
+      "id": "GRA-A2-001",
+      "order": 29,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Past simple del verbo to be"
+    },
+    {
+      "id": "GRA-A2-002",
+      "order": 30,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Past simple: verbi regolari"
+    },
+    {
+      "id": "GRA-A2-003",
+      "order": 31,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Past simple: verbi irregolari"
+    },
+    {
+      "id": "GRA-A2-004",
+      "order": 32,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Past simple: negazioni e domande con did"
+    },
+    {
+      "id": "COM-A2-004",
+      "order": 33,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "Raccontare il weekend e il passato recente"
+    },
+    {
+      "id": "GRA-A2-005",
+      "order": 34,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Past continuous e confronto con il past simple"
+    },
+    {
+      "id": "VOC-A2-001",
+      "order": 35,
+      "level": "A2",
+      "area": "Vocabolario",
+      "title": "Viaggi, trasporti e indicazioni stradali"
+    },
+    {
+      "id": "COM-A2-001",
+      "order": 36,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "Al ristorante: ordinare e chiedere il conto"
+    },
+    {
+      "id": "COM-A2-002",
+      "order": 37,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "In aeroporto: check-in e controlli"
+    },
+    {
+      "id": "GRA-A2-006",
+      "order": 38,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Il futuro: will, going to e present continuous"
+    },
+    {
+      "id": "COM-A2-005",
+      "order": 39,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "Parlare di programmi e intenzioni future"
+    },
+    {
+      "id": "GRA-A2-007",
+      "order": 40,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Present perfect: introduzione"
+    },
+    {
+      "id": "GRA-A2-008",
+      "order": 41,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Comparativi e superlativi"
+    },
+    {
+      "id": "VOC-A2-002",
+      "order": 42,
+      "level": "A2",
+      "area": "Vocabolario",
+      "title": "Lavoro e professioni"
+    },
+    {
+      "id": "GRA-A2-009",
+      "order": 43,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Numerabili e non numerabili: much, many, a lot of"
+    },
+    {
+      "id": "VOC-A2-003",
+      "order": 44,
+      "level": "A2",
+      "area": "Vocabolario",
+      "title": "Shopping, abbigliamento e taglie"
+    },
+    {
+      "id": "COM-A2-003",
+      "order": 45,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "In negozio: acquisti, taglie e resi"
+    },
+    {
+      "id": "GRA-A2-010",
+      "order": 46,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "I modali dell'obbligo: must, have to e should"
+    },
+    {
+      "id": "GRA-A2-011",
+      "order": 47,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Zero e first conditional"
+    },
+    {
+      "id": "VOC-A2-004",
+      "order": 48,
+      "level": "A2",
+      "area": "Vocabolario",
+      "title": "Tempo libero, sport e hobby"
+    },
+    {
+      "id": "GRA-A2-012",
+      "order": 49,
+      "level": "A2",
+      "area": "Grammatica",
+      "title": "Verbi + preposizioni: listen to, wait for, depend on"
+    },
+    {
+      "id": "VOC-A2-005",
+      "order": 50,
+      "level": "A2",
+      "area": "Vocabolario",
+      "title": "Salute, corpo e sintomi"
+    },
+    {
+      "id": "COM-A2-006",
+      "order": 51,
+      "level": "A2",
+      "area": "Comunicazione",
+      "title": "Scrivere un messaggio e una e-mail semplice"
+    },
+    {
+      "id": "GRA-B1-001",
+      "order": 52,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Present perfect e past simple a confronto"
+    },
+    {
+      "id": "GRA-B1-002",
+      "order": 53,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Present perfect continuous"
+    },
+    {
+      "id": "GRA-B1-003",
+      "order": 54,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Past perfect"
+    },
+    {
+      "id": "GRA-B1-004",
+      "order": 55,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "I tempi narrativi: raccontare una storia"
+    },
+    {
+      "id": "COM-B1-004",
+      "order": 56,
+      "level": "B1",
+      "area": "Comunicazione",
+      "title": "Raccontare un'esperienza in modo dettagliato"
+    },
+    {
+      "id": "GRA-B1-005",
+      "order": 57,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Used to e would per abitudini passate"
+    },
+    {
+      "id": "VOC-B1-001",
+      "order": 58,
+      "level": "B1",
+      "area": "Vocabolario",
+      "title": "Phrasal verbs di base"
+    },
+    {
+      "id": "GRA-B1-006",
+      "order": 59,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Second conditional"
+    },
+    {
+      "id": "GRA-B1-007",
+      "order": 60,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "La forma passiva"
+    },
+    {
+      "id": "VOC-B1-002",
+      "order": 61,
+      "level": "B1",
+      "area": "Vocabolario",
+      "title": "Connettivi e linker del discorso"
+    },
+    {
+      "id": "COM-B1-003",
+      "order": 62,
+      "level": "B1",
+      "area": "Comunicazione",
+      "title": "Esprimere e motivare la propria opinione"
+    },
+    {
+      "id": "GRA-B1-008",
+      "order": 63,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Il discorso indiretto"
+    },
+    {
+      "id": "GRA-B1-009",
+      "order": 64,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Le frasi relative: who, which, that"
+    },
+    {
+      "id": "GRA-B1-010",
+      "order": 65,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Gerundio o infinito dopo i verbi"
+    },
+    {
+      "id": "COM-B1-001",
+      "order": 66,
+      "level": "B1",
+      "area": "Comunicazione",
+      "title": "Colloquio di lavoro: domande e risposte"
+    },
+    {
+      "id": "VOC-B1-003",
+      "order": 67,
+      "level": "B1",
+      "area": "Vocabolario",
+      "title": "Falsi amici intermedi"
+    },
+    {
+      "id": "COM-B1-002",
+      "order": 68,
+      "level": "B1",
+      "area": "Comunicazione",
+      "title": "Dal medico: descrivere sintomi e problemi"
+    },
+    {
+      "id": "GRA-B1-011",
+      "order": 69,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Question tags e domande indirette"
+    },
+    {
+      "id": "GRA-B1-012",
+      "order": 70,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "I modali della deduzione: must, might, can't"
+    },
+    {
+      "id": "GRA-B1-013",
+      "order": 71,
+      "level": "B1",
+      "area": "Grammatica",
+      "title": "Gli articoli: usi avanzati e omissione"
+    },
+    {
+      "id": "COM-B1-005",
+      "order": 72,
+      "level": "B1",
+      "area": "Comunicazione",
+      "title": "Scrivere un'e-mail informale"
+    },
+    {
+      "id": "GRA-B2-001",
+      "order": 73,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Future perfect e future continuous"
+    },
+    {
+      "id": "GRA-B2-002",
+      "order": 74,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Third conditional"
+    },
+    {
+      "id": "GRA-B2-003",
+      "order": 75,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Mixed conditionals"
+    },
+    {
+      "id": "GRA-B2-004",
+      "order": 76,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Wish e if only"
+    },
+    {
+      "id": "COM-B2-003",
+      "order": 77,
+      "level": "B2",
+      "area": "Comunicazione",
+      "title": "Confrontare vantaggi e svantaggi"
+    },
+    {
+      "id": "GRA-B2-005",
+      "order": 78,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "I modali riferiti al passato"
+    },
+    {
+      "id": "VOC-B2-001",
+      "order": 79,
+      "level": "B2",
+      "area": "Vocabolario",
+      "title": "Collocazioni e phrasal verbs avanzati"
+    },
+    {
+      "id": "GRA-B2-006",
+      "order": 80,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "La forma passiva avanzata"
+    },
+    {
+      "id": "GRA-B2-007",
+      "order": 81,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Reporting verbs"
+    },
+    {
+      "id": "VOC-B2-002",
+      "order": 82,
+      "level": "B2",
+      "area": "Vocabolario",
+      "title": "Il lessico del lavoro e delle riunioni"
+    },
+    {
+      "id": "COM-B2-001",
+      "order": 83,
+      "level": "B2",
+      "area": "Comunicazione",
+      "title": "Riunione di lavoro: proporre e negoziare"
+    },
+    {
+      "id": "GRA-B2-008",
+      "order": 84,
+      "level": "B2",
+      "area": "Grammatica",
+      "title": "Have e get something done"
+    },
+    {
+      "id": "COM-B2-002",
+      "order": 85,
+      "level": "B2",
+      "area": "Comunicazione",
+      "title": "Gestire un problema o un reclamo"
+    },
+    {
+      "id": "COM-B2-004",
+      "order": 86,
+      "level": "B2",
+      "area": "Comunicazione",
+      "title": "Sostenere un'argomentazione"
+    },
+    {
+      "id": "COM-B2-005",
+      "order": 87,
+      "level": "B2",
+      "area": "Comunicazione",
+      "title": "Scrivere un'e-mail formale"
+    },
+    {
+      "id": "GRA-C1-001",
+      "order": 88,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "L'inversione dopo avverbi negativi"
+    },
+    {
+      "id": "GRA-C1-002",
+      "order": 89,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "Cleft sentences e strutture enfatiche"
+    },
+    {
+      "id": "VOC-C1-001",
+      "order": 90,
+      "level": "C1",
+      "area": "Vocabolario",
+      "title": "Idiomi e linguaggio figurato"
+    },
+    {
+      "id": "GRA-C1-003",
+      "order": 91,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "Participle clauses"
+    },
+    {
+      "id": "GRA-C1-004",
+      "order": 92,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "Reduced relative clauses"
+    },
+    {
+      "id": "GRA-C1-005",
+      "order": 93,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "Ellissi e substitution"
+    },
+    {
+      "id": "GRA-C1-006",
+      "order": 94,
+      "level": "C1",
+      "area": "Grammatica",
+      "title": "Hedging e linguaggio prudente"
+    },
+    {
+      "id": "COM-C1-001",
+      "order": 95,
+      "level": "C1",
+      "area": "Comunicazione",
+      "title": "Negoziazione professionale avanzata"
+    },
+    {
+      "id": "VOC-C1-002",
+      "order": 96,
+      "level": "C1",
+      "area": "Vocabolario",
+      "title": "Registro formale e informale"
+    },
+    {
+      "id": "COM-C1-002",
+      "order": 97,
+      "level": "C1",
+      "area": "Comunicazione",
+      "title": "Presentare un tema complesso con chiarezza"
+    },
+    {
+      "id": "COM-C1-003",
+      "order": 98,
+      "level": "C1",
+      "area": "Comunicazione",
+      "title": "Scrivere un report strutturato"
+    }
+  ]
+}

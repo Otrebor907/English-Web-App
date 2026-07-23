@@ -13,12 +13,12 @@ class ApiTests(APITestCase):
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.user).key}")
 
-    def test_locked_lesson_lists_missing_prerequisite(self):
+    def test_lesson_is_available_and_lists_recommended_prerequisite(self):
         response = self.client.get("/api/percorso/")
         self.assertEqual([item["ordine_mvp"] for item in response.data], [1, 2, 3])
         self.assertEqual(response.data[0]["priorita"], "P0")
         vocabulary = next(item for item in response.data if item["id"] == "DEMO-VOC-001")
-        self.assertEqual(vocabulary["stato"], "bloccata")
+        self.assertEqual(vocabulary["stato"], "disponibile")
         self.assertEqual(vocabulary["prerequisiti_mancanti"][0]["id"], "DEMO-GRA-001")
 
     def test_final_quiz_is_scored_on_server(self):
@@ -46,7 +46,7 @@ class FullUserJourneyTests(APITestCase):
     def setUpTestData(cls):
         import_content("fixtures/contenuti_minimi.json")
 
-    def test_registration_lesson_quiz_completion_and_unlock(self):
+    def test_registration_lesson_quiz_completion_and_free_access(self):
         client = APIClient()
         registration = client.post(
             "/api/auth/registrati/",
@@ -60,7 +60,7 @@ class FullUserJourneyTests(APITestCase):
         grammar = next(item for item in initial_path.data if item["id"] == "DEMO-GRA-001")
         vocabulary = next(item for item in initial_path.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(grammar["stato"], "disponibile")
-        self.assertEqual(vocabulary["stato"], "bloccata")
+        self.assertEqual(vocabulary["stato"], "disponibile")
 
         lesson = client.get("/api/lezioni/DEMO-GRA-001/")
         self.assertEqual(lesson.status_code, 200)
@@ -72,8 +72,8 @@ class FullUserJourneyTests(APITestCase):
         self.assertEqual(result.data["punteggio"], 100)
         self.assertEqual(result.data["stato"], "completata")
 
-        unlocked_path = client.get("/api/percorso/")
-        vocabulary = next(item for item in unlocked_path.data if item["id"] == "DEMO-VOC-001")
+        after_completion = client.get("/api/percorso/")
+        vocabulary = next(item for item in after_completion.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(vocabulary["stato"], "disponibile")
         progress = client.get("/api/progressi/")
         grammar_progress = next(item for item in progress.data if item["lezione_id"] == "DEMO-GRA-001")

@@ -4,9 +4,12 @@ from . import views
 urlpatterns = [
     path("auth/registrati/", views.register),
     path("auth/login/", views.login),
+    path("auth/password/", views.change_password),
     path("profilo/", views.profile),
     path("percorso/", views.path_lessons),
+    path("lezioni/indice/", views.lesson_index),
     path("lezioni/<str:lesson_id>/", views.lesson_detail),
+    path("lezioni/<str:lesson_id>/assegna/", views.lesson_assignment),
     path("lezioni/<str:lesson_id>/inizia/", views.start_lesson),
     path("lezioni/<str:lesson_id>/quesiti/<int:question_id>/verifica/", views.check_answer),
     path("lezioni/<str:lesson_id>/quiz-finale/", views.submit_final_quiz),

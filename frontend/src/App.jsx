@@ -1,5 +1,5 @@
-import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
-import { Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { createContext, useContext, useEffect, useRef, useState } from 'react'
+import { Link, Navigate, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { api } from './api'
 
 const AuthContext = createContext(null)
@@ -9,8 +9,7 @@ const AREA = {
   COM: { label: 'Comunicazione', icon: 'Hi', className: 'communication' },
 }
 const STATUS_LABELS = {
-  bloccata: 'Bloccata',
-  disponibile: 'Disponibile',
+  disponibile: 'Non iniziata',
   in_corso: 'In corso',
   completata: 'Completata',
   in_preparazione: 'In preparazione',
@@ -23,32 +22,161 @@ function AuthProvider({ children }) {
     localStorage.setItem('user', JSON.stringify(payload.utente))
     setUser(payload.utente)
   }
+  const updateUser = (patch) => {
+    setUser(current => {
+      const next = { ...current, ...patch }
+      localStorage.setItem('user', JSON.stringify(next))
+      return next
+    })
+  }
+  const updateToken = (token) => localStorage.setItem('token', token)
   const logout = () => { localStorage.clear(); setUser(null) }
-  return <AuthContext.Provider value={{ user, authenticate, logout }}>{children}</AuthContext.Provider>
+  return <AuthContext.Provider value={{ user, authenticate, updateUser, updateToken, logout }}>{children}</AuthContext.Provider>
 }
+
+const NO_SIDEBAR_ROUTES = ['/', '/login', '/registrati']
 
 function Layout({ children }) {
   const { user, logout } = useContext(AuthContext)
+  const location = useLocation()
+  const showSidebar = !NO_SIDEBAR_ROUTES.includes(location.pathname)
   return <>
     <a className="skip-link" href="#main-content">Vai al contenuto</a>
     <header className="topbar">
-      <Link className="brand" to="/percorso"><span>PC</span> Prima conversazione</Link>
-      {user && <nav aria-label="Navigazione principale">
-        <Link to="/percorso">Percorso</Link>
-        <Link to="/progressi">Progressi</Link>
-        {user.is_staff && <Link to="/contenuti-da-completare">Contenuti</Link>}
-        <Link to="/profilo">Profilo</Link>
-        <button type="button" className="link-button" onClick={logout}>Esci</button>
-      </nav>}
+      <Link className="brand" to="/"><span className="brand-mark" aria-hidden="true">PC</span> Prima conversazione</Link>
+      <nav aria-label="Navigazione principale">
+        <Link to="/">Home</Link>
+        <Link to="/lezioni">Lezioni</Link>
+        {user && <Link to="/progressi">Progressi</Link>}
+        {user?.is_staff && <Link to="/contenuti-da-completare">Contenuti</Link>}
+        {user && <Link to="/profilo">Profilo</Link>}
+        {user
+          ? <button type="button" className="link-button" onClick={logout}>Esci</button>
+          : <>
+            <Link to="/login">Accedi</Link>
+            <Link className="nav-cta" to="/registrati">Registrati</Link>
+          </>}
+      </nav>
     </header>
-    <main id="main-content">{children}</main>
+    <div className={showSidebar ? 'app-shell with-sidebar' : 'app-shell'}>
+      {showSidebar && <LessonSidebar />}
+      <main id="main-content">{children}</main>
+    </div>
     <footer>Un passo alla volta, fino alla tua prima conversazione.</footer>
   </>
 }
 
+function LessonSidebar() {
+  const { data } = useLoad(() => api('/lezioni/indice/'))
+  if (!data) return null
+  return <nav className="side-nav" aria-label="Elenco completo delle lezioni">
+    {Object.entries(AREA).map(([code, area]) => {
+      const lessons = data[code] || []
+      if (!lessons.length) return null
+      return <details key={code} className="side-group">
+        <summary>
+          <span>{area.label}</span>
+          <span className="side-count" aria-hidden="true">{lessons.length}</span>
+        </summary>
+        <ul>
+          {lessons.map(lesson => (
+            <li key={lesson.id}>
+              <Link className="side-link" to={`/lezioni/${lesson.id}`}>
+                <span className="side-link-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</span>
+                <span className="side-link-name">{lesson.nome}</span>
+                {lesson.stato === 'completata' && <span className="side-link-flag done" aria-label="Completata">✓</span>}
+                {lesson.in_preparazione && <span className="side-link-flag prep" aria-label="In preparazione">…</span>}
+              </Link>
+            </li>
+          ))}
+        </ul>
+      </details>
+    })}
+  </nav>
+}
+
 function Protected({ children }) {
   const { user } = useContext(AuthContext)
-  return user ? children : <Navigate to="/login" replace />
+  const location = useLocation()
+  if (user) return children
+  return <Navigate to={`/login?next=${encodeURIComponent(location.pathname)}`} replace />
+}
+
+function HomePage() {
+  const { user } = useContext(AuthContext)
+  const { data: assigned } = useLoad(() => user ? api('/progressi/') : Promise.resolve(null), [Boolean(user)])
+  return <div className="home">
+    <section className="home-hero">
+      <h1>Impara l'inglese, una lezione alla volta.</h1>
+      <p>Esplora gratuitamente tutte le lezioni di grammatica, vocabolario e comunicazione. Registrati quando vuoi assegnarti le lezioni, svolgere gli esercizi e tenere traccia dei tuoi progressi.</p>
+      <div className="home-cta">
+        <Link className="primary" to="/lezioni">Esplora le lezioni</Link>
+        {user
+          ? <Link className="secondary" to="/progressi">Vai ai tuoi progressi</Link>
+          : <Link className="secondary" to="/registrati">Registrati gratuitamente</Link>}
+      </div>
+      {user && assigned?.length > 0 && (
+        <p className="home-summary">
+          Hai {assigned.length} {assigned.length === 1 ? 'lezione assegnata' : 'lezioni assegnate'} al tuo percorso
+          {assigned.some(item => item.stato === 'completata') && <> — {assigned.filter(item => item.stato === 'completata').length} completate</>}.
+        </p>
+      )}
+    </section>
+    <section className="home-open">
+      <h2>Le lezioni sono aperte a tutti.</h2>
+      <p>Non serve un account per studiare. Consulta liberamente spiegazioni, esempi ed errori tipici, scegli l'argomento che ti interessa e impara seguendo il tuo ritmo.</p>
+    </section>
+    <section className="home-modes">
+      <div className="home-mode-card">
+        <h3>Studia senza registrarti</h3>
+        <ul>
+          <li>Consulta tutte le lezioni</li>
+          <li>Leggi regole ed esempi</li>
+          <li>Naviga liberamente tra i livelli</li>
+          <li>Nessun percorso obbligatorio</li>
+        </ul>
+      </div>
+      <div className="home-mode-card featured">
+        <h3>Registrati e segui i progressi</h3>
+        <ul>
+          <li>Assegna le lezioni al tuo percorso</li>
+          <li>Svolgi gli esercizi</li>
+          <li>Ricevi correzioni e spiegazioni</li>
+          <li>Salva risultati e avanzamento</li>
+          <li>Riprendi da dove avevi interrotto</li>
+        </ul>
+        {!user && <Link className="primary" to="/registrati">Crea il tuo account</Link>}
+      </div>
+    </section>
+    <section className="home-areas">
+      <h2>Come è organizzato il catalogo</h2>
+      <div className="home-area-grid">
+        <article className="home-area-card grammar">
+          <span className="area-icon grammar" aria-hidden="true">Aa</span>
+          <h3>Grammatica</h3>
+          <p>Le regole spiegate con esempi e con gli errori tipici di chi parla italiano — non da imparare a memoria.</p>
+        </article>
+        <article className="home-area-card vocabulary">
+          <span className="area-icon vocabulary" aria-hidden="true">Ab</span>
+          <h3>Vocabolario</h3>
+          <p>Le parole e le espressioni che servono davvero per farsi capire in una conversazione reale.</p>
+        </article>
+        <article className="home-area-card communication">
+          <span className="area-icon communication" aria-hidden="true">Hi</span>
+          <h3>Comunicazione</h3>
+          <p>Situazioni concrete — dal presentarti al parlare al telefono — con le frasi da usare.</p>
+        </article>
+      </div>
+    </section>
+    <section className="home-how">
+      <h2>Come funziona una lezione</h2>
+      <ol className="home-steps">
+        <li><b>Leggi</b> — la spiegazione scorre come un testo continuo, senza dover cliccare avanti e indietro tra le regole.</li>
+        <li><b>Esercitati</b> — in fondo alla lezione trovi l'esercizio guidato e il quiz finale, con la correzione spiegata (per chi ha un account).</li>
+        <li><b>Tieni traccia</b> — il punteggio migliore resta salvato nei tuoi progressi, lezione per lezione.</li>
+      </ol>
+    </section>
+  </div>
 }
 
 function AuthPage({ register = false }) {
@@ -57,11 +185,14 @@ function AuthPage({ register = false }) {
   const [busy, setBusy] = useState(false)
   const { authenticate } = useContext(AuthContext)
   const navigate = useNavigate()
+  const location = useLocation()
+  const next = new URLSearchParams(location.search).get('next') || '/lezioni'
+  const nextQuery = next !== '/lezioni' ? `?next=${encodeURIComponent(next)}` : ''
   const submit = async (event) => {
     event.preventDefault(); setBusy(true); setError('')
     try {
       authenticate(await api(`/auth/${register ? 'registrati' : 'login'}/`, { method: 'POST', body: JSON.stringify(form) }))
-      navigate('/percorso')
+      navigate(next)
     } catch (err) {
       setError(err.data?.email?.[0] || err.data?.password?.[0] || err.message)
     } finally { setBusy(false) }
@@ -79,7 +210,7 @@ function AuthPage({ register = false }) {
       <label>Password<input type="password" required minLength="8" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} /></label>
       {error && <div className="alert" role="alert" aria-live="assertive">{error}</div>}
       <button className="primary" disabled={busy}>{busy ? 'Attendi…' : register ? 'Crea account' : 'Accedi'}</button>
-      <small>{register ? 'Hai già un account?' : 'Non hai un account?'} <Link to={register ? '/login' : '/registrati'}>{register ? 'Accedi' : 'Registrati'}</Link></small>
+      <small>{register ? 'Hai già un account?' : 'Non hai un account?'} <Link to={`${register ? '/login' : '/registrati'}${nextQuery}`}>{register ? 'Accedi' : 'Registrati'}</Link></small>
     </form>
   </div>
 }
@@ -95,6 +226,25 @@ function useLoad(loader, dependencies = []) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, dependencies)
   return state
+}
+
+function useCountUp(target, duration = 1200) {
+  const [value, setValue] = useState(target)
+  useEffect(() => {
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) { setValue(target); return }
+    let raf
+    const start = performance.now()
+    setValue(0)
+    const tick = (now) => {
+      const p = Math.min(1, (now - start) / duration)
+      setValue(Math.round((1 - Math.pow(1 - p, 3)) * target))
+      if (p < 1) raf = requestAnimationFrame(tick)
+    }
+    raf = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target])
+  return value
 }
 
 function StatusPill({ status }) {
@@ -151,37 +301,23 @@ function Section({ section }) {
   </div>
 }
 
-function SectionCarousel({ sezioni, onFinished }) {
-  const [index, setIndex] = useState(0)
-  const total = sezioni.length
-  const headingRef = useRef(null)
-  useEffect(() => {
-    if (headingRef.current) headingRef.current.focus()
-  }, [index])
-  const section = sezioni[index]
-  const isLast = index === total - 1
-  return <div className="section-carousel" aria-label="Sezioni della lezione">
-    <div className="section-progress" role="group" aria-label="Avanzamento sezioni">
-      <div className="section-progress-meta">
-        <span>Sezione <b>{index + 1}</b> di {total}</span>
-        <span aria-hidden="true">{Math.round(((index + 1) / total) * 100)}%</span>
-      </div>
-      <div className="meter" role="progressbar" aria-valuenow={index + 1} aria-valuemin={1} aria-valuemax={total}>
-        <i style={{ width: `${((index + 1) / total) * 100}%` }} />
-      </div>
-    </div>
-    <div className="section-wrap" ref={headingRef} tabIndex={-1} aria-live="polite">
-      <Section section={section} />
-    </div>
-    <div className="section-nav">
-      <button type="button" className="secondary" onClick={() => setIndex(i => Math.max(0, i - 1))} disabled={index === 0}>← Precedente</button>
-      <div className="section-dots" aria-hidden="true">
-        {sezioni.map((_, i) => <span key={i} className={i === index ? 'dot active' : i < index ? 'dot done' : 'dot'} />)}
-      </div>
-      {!isLast && <button type="button" className="primary" onClick={() => setIndex(i => Math.min(total - 1, i + 1))}>Successiva →</button>}
-      {isLast && <button type="button" className="primary" onClick={onFinished}>Vai agli esercizi →</button>}
-    </div>
+function SectionList({ sezioni }) {
+  return <div className="section-list" aria-label="Contenuto della lezione">
+    {sezioni.map((section, i) => <Section key={i} section={section} />)}
   </div>
+}
+
+function ResultCard({ result }) {
+  const animatedScore = useCountUp(result.punteggio)
+  return <section className="quiz-result" aria-live="polite">
+    <span aria-hidden="true">
+      {result.superato ? '✓' : '↻'}
+      {result.superato && <span className="star-burst" aria-hidden="true" />}
+    </span>
+    <h2>{animatedScore}%</h2>
+    <p>{result.superato ? 'Quiz superato! La lezione è completata.' : 'Riprova: serve almeno il 70%.'}</p>
+    <small>Miglior punteggio: {result.miglior_punteggio}%</small>
+  </section>
 }
 
 function QuizView({ quiz, lessonId, onComplete }) {
@@ -208,12 +344,7 @@ function QuizView({ quiz, lessonId, onComplete }) {
   }
 
   if (result) {
-    return <section className="quiz-result" aria-live="polite">
-      <span aria-hidden="true">{result.superato ? '✓' : '↻'}</span>
-      <h2>{result.punteggio}%</h2>
-      <p>{result.superato ? 'Quiz superato! La lezione è completata.' : 'Riprova: serve almeno il 70%.'}</p>
-      <small>Miglior punteggio: {result.miglior_punteggio}%</small>
-    </section>
+    return <ResultCard result={result} />
   }
 
   const answer = answers[question.id] || ''
@@ -251,14 +382,11 @@ function QuizView({ quiz, lessonId, onComplete }) {
         : 'Esercizio guidato — non fa punteggio, esplora liberamente.'}
     </div>
     <div className="quiz-top">
-      <div>
-        <span className="eyebrow">{isFinal ? 'QUIZ FINALE' : 'ESERCIZIO GUIDATO'}</span>
-        <h2 id={`quiz-h-${quiz.id}`}>{quiz.titolo}</h2>
-      </div>
+      <h2 id={`quiz-h-${quiz.id}`}>{quiz.titolo}</h2>
       <b>{index + 1}/{total}</b>
     </div>
     <div className="meter" role="progressbar" aria-valuenow={index + 1} aria-valuemin={1} aria-valuemax={total}>
-      <i style={{ width: `${((index + 1) / total) * 100}%` }} />
+      <i style={{ '--pct': ((index + 1) / total) * 100 }} />
     </div>
     <h3 ref={questionHeadingRef} tabIndex={-1}>{question.testo}</h3>
     {question.tipo === 'scelta_multipla'
@@ -303,7 +431,7 @@ function InPreparationLesson({ lesson }) {
   const area = AREA[lesson.area] || AREA.GRA
   return <div className={`lesson-page ${area.className}`}>
     <div className="lesson-hero">
-      <Link className="back" to="/percorso">← Percorso</Link>
+      <Link className="back" to="/lezioni">← Lezioni</Link>
       <span className="eyebrow">{area.label} · {lesson.livello}</span>
       <h1>{lesson.nome}</h1>
       <p>{lesson.descrizione}</p>
@@ -319,41 +447,57 @@ function InPreparationLesson({ lesson }) {
           {lesson.competenze?.length ? <div><dt>Competenze</dt><dd>{lesson.competenze.join(', ')}</dd></div> : null}
           {lesson.errori_tipici?.length ? <div><dt>Errori tipici</dt><dd>{lesson.errori_tipici.join('; ')}</dd></div> : null}
         </dl>
-        <Link className="primary" to="/percorso">Torna al percorso</Link>
+        <Link className="primary" to="/lezioni">Torna alle lezioni</Link>
       </div>
     </div>
   </div>
 }
 
-function PathPage() {
-  const { loading, data: lessons, error } = useLoad(() => api('/percorso/'))
+function LessonsPage() {
+  const { user } = useContext(AuthContext)
+  const { loading, data, error } = useLoad(() => api('/lezioni/indice/'))
+  const [filter, setFilter] = useState('TUTTE')
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
-  const complete = lessons.filter(item => item.stato === 'completata').length
-  const publishable = lessons.filter(item => !item.in_preparazione).length
+  const lessons = Object.entries(data).flatMap(([code, items]) => items.map(item => ({ ...item, area: code })))
+  const assignedCount = lessons.filter(item => item.assegnata).length
+  const filtered = filter === 'TUTTE' ? lessons : lessons.filter(item => item.area === filter)
   return <div className="page">
     <div className="page-heading">
       <div>
-        <span className="eyebrow">IL TUO PERCORSO</span>
-        <h1>Impara. Prova. Parla.</h1>
-        <p>Ogni lezione prepara la successiva. Completa i prerequisiti per avanzare.</p>
+        <h1>Tutte le lezioni</h1>
+        <p>{user
+          ? 'Consulta ogni lezione, assegnala al tuo percorso quando vuoi e tieni traccia dei progressi.'
+          : "Consultabili gratuitamente, senza account. Registrati per assegnarle al tuo percorso e salvare i progressi."}</p>
       </div>
-      <div className="progress-ring" role="img" aria-label={`${complete} lezioni completate su ${publishable}`}>
-        <strong>{complete}/{publishable}</strong><span>lezioni</span>
-      </div>
+      {user && <div className="progress-ring" role="img" aria-label={`${assignedCount} lezioni nel tuo percorso`}>
+        <strong>{assignedCount}</strong><span>nel percorso</span>
+      </div>}
     </div>
+    <div className="filter-row" role="group" aria-label="Filtra per area">
+      <button type="button" className={`filter-chip ${filter === 'TUTTE' ? 'active' : ''}`} aria-pressed={filter === 'TUTTE'} onClick={() => setFilter('TUTTE')}>Tutte</button>
+      {Object.entries(AREA).map(([code, area]) => (
+        <button
+          key={code}
+          type="button"
+          className={`filter-chip ${area.className} ${filter === code ? 'active' : ''}`}
+          aria-pressed={filter === code}
+          onClick={() => setFilter(code)}
+        >{area.label}</button>
+      ))}
+    </div>
+    {filtered.length === 0 && <p className="empty">Nessuna lezione in quest'area.</p>}
     <ul className="lesson-list" aria-label="Elenco lezioni">
-      {lessons.map((lesson, index) => {
+      {filtered.map((lesson, index) => {
         const area = AREA[lesson.area] || AREA.GRA
         const inPrep = lesson.in_preparazione
-        const locked = lesson.stato === 'bloccata'
-        const cardClass = `lesson-card ${locked ? 'locked' : ''} ${inPrep ? 'in-prep' : ''}`.trim()
+        const cardClass = `lesson-card ${area.className} ${inPrep ? 'in-prep' : ''}`.trim()
         return <li key={lesson.id}>
-          <article className={cardClass} aria-labelledby={`lc-${lesson.id}`}>
+          <article className={cardClass} style={{ '--i': index }} aria-labelledby={`lc-${lesson.id}`}>
             <div className={`area-icon ${area.className}`} aria-hidden="true">
-              {inPrep ? '…' : locked ? '⌁' : area.icon}
+              {inPrep ? '…' : area.icon}
             </div>
-            <div className="lesson-order" aria-hidden="true">{String(index + 1).padStart(2, '0')}</div>
+            <div className="lesson-order" aria-hidden="true">{String(lesson.ordine_percorso).padStart(2, '0')}</div>
             <div className="lesson-main">
               <div className="lesson-meta">
                 <span>{area.label}</span>
@@ -363,16 +507,14 @@ function PathPage() {
               </div>
               <h2 id={`lc-${lesson.id}`}>{lesson.nome}</h2>
               <p>{lesson.descrizione}</p>
-              {locked && !inPrep && (
-                <p className="requirements"><b>Prima completa:</b> {lesson.prerequisiti_mancanti.map(x => x.nome).join(', ')}</p>
-              )}
               {inPrep && (
                 <p className="in-prep-note">Struttura editoriale definita, contenuti in arrivo.</p>
               )}
             </div>
             <div className="lesson-action">
-              <StatusPill status={lesson.stato} />
-              {!locked && !inPrep && (
+              {user && lesson.stato && <StatusPill status={lesson.stato} />}
+              {user && lesson.assegnata && <span className="status assegnata">Nel percorso</span>}
+              {!inPrep && (
                 <Link className="arrow" aria-label={`Apri ${lesson.nome}`} to={`/lezioni/${lesson.id}`}>→</Link>
               )}
               {inPrep && (
@@ -388,21 +530,20 @@ function PathPage() {
 
 function LessonPage() {
   const { id } = useParams()
+  const { user } = useContext(AuthContext)
+  const location = useLocation()
   const { loading, data: lesson, error } = useLoad(() => api(`/lezioni/${id}/`), [id])
-  const [phase, setPhase] = useState('sections')
   const [quizIndex, setQuizIndex] = useState(-1)
-  const quizRef = useRef(null)
+  const [assigned, setAssigned] = useState(false)
+  const [assignBusy, setAssignBusy] = useState(false)
 
-  const goToQuiz = useCallback(() => {
-    setPhase('quiz')
-    setTimeout(() => quizRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 20)
-  }, [])
+  useEffect(() => { setAssigned(Boolean(lesson?.assegnata)) }, [lesson?.id, lesson?.assegnata])
 
   useEffect(() => {
-    if (lesson && !lesson.in_preparazione) {
+    if (user && lesson && !lesson.in_preparazione) {
       api(`/lezioni/${id}/inizia/`, { method: 'POST' }).catch(() => {})
     }
-  }, [id, lesson])
+  }, [id, lesson, user])
 
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
@@ -411,10 +552,19 @@ function LessonPage() {
   const area = AREA[lesson.area] || AREA.GRA
   const hasSections = lesson.sezioni?.length > 0
   const hasQuiz = lesson.quiz?.length > 0
+  const nextParam = `?next=${encodeURIComponent(location.pathname)}`
+
+  const toggleAssign = async () => {
+    setAssignBusy(true)
+    try {
+      const data = await api(`/lezioni/${id}/assegna/`, { method: assigned ? 'DELETE' : 'POST' })
+      setAssigned(Boolean(data.assegnata))
+    } finally { setAssignBusy(false) }
+  }
 
   return <div className={`lesson-page ${area.className}`}>
     <div className="lesson-hero">
-      <Link className="back" to="/percorso">← Percorso</Link>
+      <Link className="back" to="/lezioni">← Lezioni</Link>
       <span className="eyebrow">{area.label} · {lesson.livello}</span>
       <h1>{lesson.nome}</h1>
       <p>{lesson.obiettivo_didattico}</p>
@@ -423,30 +573,58 @@ function LessonPage() {
         {lesson.priorita && <span>Priorità {lesson.priorita}</span>}
         {lesson.difficolta && <span>Difficoltà {lesson.difficolta}</span>}
       </div>
+      {user && (
+        <div className="assign-control">
+          {assigned
+            ? <>
+              <span className="assign-confirm" role="status">✓ Aggiunta alle mie lezioni</span>
+              <button type="button" className="secondary" onClick={toggleAssign} disabled={assignBusy}>
+                {assignBusy ? 'Attendi…' : 'Rimuovi dalle mie lezioni'}
+              </button>
+            </>
+            : <button type="button" className="primary" onClick={toggleAssign} disabled={assignBusy}>
+              {assignBusy ? 'Attendi…' : 'Aggiungi alle mie lezioni'}
+            </button>}
+          <span className="assign-meta">
+            <StatusPill status={lesson.stato_utente || 'disponibile'} />
+            {lesson.ultimo_risultato != null && <span className="assign-score">Ultimo risultato: {lesson.ultimo_risultato}%</span>}
+          </span>
+        </div>
+      )}
     </div>
     <div className="lesson-content">
-      {hasSections && phase === 'sections' && (
-        <SectionCarousel sezioni={lesson.sezioni} onFinished={goToQuiz} />
-      )}
-      {phase === 'quiz' && (
-        <div ref={quizRef}>
-          {!hasQuiz && (
-            <section className="quiz-card empty">
-              <span className="eyebrow">ESERCIZI</span>
-              <h2>Quiz in preparazione</h2>
-              <p>Le esercitazioni per questa lezione non sono ancora disponibili.</p>
-              <button type="button" className="secondary" onClick={() => setPhase('sections')}>← Torna alle sezioni</button>
-            </section>
-          )}
-          {hasQuiz && (
-            <div className="quiz-launch" role="group" aria-label="Esercitazioni disponibili">
-              <h2>È il momento di provare</h2>
+      {hasSections && <SectionList sezioni={lesson.sezioni} />}
+      <div className="exercise-section">
+        <h2 className="exercise-heading">Esercizio</h2>
+        {!hasQuiz && (
+          <section className="quiz-card empty">
+            <h2>Quiz in preparazione</h2>
+            <p>Le esercitazioni per questa lezione non sono ancora disponibili.</p>
+          </section>
+        )}
+        {hasQuiz && (
+          <div className="exercise-wrap">
+            {!user && (
+              <div className="exercise-gate" role="region" aria-label="Registrazione richiesta per esercitarsi">
+                <p>Per esercitarti, salvare i progressi e assegnarti le lezioni, registrati gratuitamente.</p>
+                <div className="exercise-gate-actions">
+                  <Link className="primary" to={`/registrati${nextParam}`}>Registrati</Link>
+                  <Link className="secondary" to={`/login${nextParam}`}>Hai già un account? Accedi</Link>
+                </div>
+              </div>
+            )}
+            <div
+              className="quiz-launch" role="group" aria-label="Esercitazioni disponibili"
+              inert={!user} aria-hidden={!user}
+            >
+              <h3>È il momento di provare</h3>
               <p>Inizia dall'esercizio guidato, poi affronta il quiz finale.</p>
               <div className="quiz-launch-buttons">
                 {lesson.quiz.map((quiz, i) => (
                   <button
                     key={quiz.id}
                     type="button"
+                    disabled={!user}
                     className={quiz.modalita === 'finale' ? 'primary' : 'secondary'}
                     onClick={() => setQuizIndex(i)}
                     aria-pressed={quizIndex === i}
@@ -454,16 +632,19 @@ function LessonPage() {
                 ))}
               </div>
             </div>
-          )}
-          {quizIndex >= 0 && hasQuiz && (
-            <QuizView
-              quiz={lesson.quiz[quizIndex]}
-              lessonId={id}
-              onComplete={() => quizIndex < lesson.quiz.length - 1 && setQuizIndex(quizIndex + 1)}
-            />
-          )}
-        </div>
-      )}
+          </div>
+        )}
+        {user && quizIndex >= 0 && hasQuiz && (
+          <QuizView
+            quiz={lesson.quiz[quizIndex]}
+            lessonId={id}
+            onComplete={(data) => {
+              if (data?.superato) setAssigned(true)
+              if (quizIndex < lesson.quiz.length - 1) setQuizIndex(quizIndex + 1)
+            }}
+          />
+        )}
+      </div>
     </div>
   </div>
 }
@@ -473,10 +654,9 @@ function ProgressPage() {
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
   return <div className="page narrow">
-    <span className="eyebrow">I TUOI RISULTATI</span>
     <h1>Progressi</h1>
     {data.length === 0
-      ? <div className="empty">Non hai ancora iniziato una lezione. <Link to="/percorso">Vai al percorso</Link>.</div>
+      ? <div className="empty">Non hai ancora assegnato nessuna lezione al tuo percorso. <Link to="/lezioni">Esplora le lezioni</Link> e aggiungi quelle che ti interessano.</div>
       : <ul className="progress-list" aria-label="Elenco progressi">
           {data.map(item => <li key={item.lezione_id}><article>
             <div><h3>{item.lezione_nome}</h3><StatusPill status={item.stato} /></div>
@@ -487,9 +667,42 @@ function ProgressPage() {
 }
 
 function ProfilePage() {
-  const { user } = useContext(AuthContext)
+  const { user, updateUser, updateToken } = useContext(AuthContext)
+  const [emailForm, setEmailForm] = useState({ email: user.email })
+  const [emailState, setEmailState] = useState({ busy: false, error: '', success: false })
+  const [passwordForm, setPasswordForm] = useState({ password_attuale: '', nuova_password: '' })
+  const [passwordState, setPasswordState] = useState({ busy: false, error: '', success: false })
+
+  const submitEmail = async (event) => {
+    event.preventDefault()
+    setEmailState({ busy: true, error: '', success: false })
+    try {
+      const data = await api('/profilo/', { method: 'PATCH', body: JSON.stringify({ email: emailForm.email }) })
+      updateUser({ email: data.email })
+      setEmailState({ busy: false, error: '', success: true })
+    } catch (err) {
+      setEmailState({ busy: false, error: err.data?.email?.[0] || err.message, success: false })
+    }
+  }
+
+  const submitPassword = async (event) => {
+    event.preventDefault()
+    setPasswordState({ busy: true, error: '', success: false })
+    try {
+      const data = await api('/auth/password/', { method: 'POST', body: JSON.stringify(passwordForm) })
+      updateToken(data.token)
+      setPasswordForm({ password_attuale: '', nuova_password: '' })
+      setPasswordState({ busy: false, error: '', success: true })
+    } catch (err) {
+      setPasswordState({
+        busy: false,
+        error: err.data?.password_attuale?.[0] || err.data?.nuova_password?.[0] || err.message,
+        success: false,
+      })
+    }
+  }
+
   return <div className="page narrow">
-    <span className="eyebrow">IL TUO ACCOUNT</span>
     <h1>Profilo</h1>
     <div className="profile-card">
       <div className="avatar" aria-hidden="true">{user.email[0].toUpperCase()}</div>
@@ -499,17 +712,56 @@ function ProfilePage() {
         <p>Iscritto dal {new Date(user.creato_il).toLocaleDateString('it-IT')}</p>
       </div>
     </div>
+
+    <form className="settings-card" onSubmit={submitEmail}>
+      <h2>Cambia email</h2>
+      <p>Aggiorna l'indirizzo collegato al tuo account.</p>
+      <label>Nuova email
+        <input
+          type="email" required value={emailForm.email}
+          onChange={e => { setEmailForm({ email: e.target.value }); setEmailState(s => ({ ...s, error: '', success: false })) }}
+          aria-describedby="email-helper" aria-invalid={Boolean(emailState.error)}
+        />
+      </label>
+      <div id="email-helper" className="field-helper" aria-live="polite">
+        {emailState.error && <span className="field-error" role="alert">{emailState.error}</span>}
+        {!emailState.error && emailState.success && <span className="field-success">✓ Email aggiornata.</span>}
+      </div>
+      <button className="primary" disabled={emailState.busy}>{emailState.busy ? 'Attendi…' : 'Salva email'}</button>
+    </form>
+
+    <form className="settings-card" onSubmit={submitPassword}>
+      <h2>Cambia password</h2>
+      <p>Scegli una nuova password di almeno 8 caratteri.</p>
+      <label>Password attuale
+        <input
+          type="password" required value={passwordForm.password_attuale}
+          onChange={e => { setPasswordForm({ ...passwordForm, password_attuale: e.target.value }); setPasswordState(s => ({ ...s, error: '', success: false })) }}
+        />
+      </label>
+      <label>Nuova password
+        <input
+          type="password" required minLength="8" value={passwordForm.nuova_password}
+          onChange={e => { setPasswordForm({ ...passwordForm, nuova_password: e.target.value }); setPasswordState(s => ({ ...s, error: '', success: false })) }}
+          aria-describedby="password-helper" aria-invalid={Boolean(passwordState.error)}
+        />
+      </label>
+      <div id="password-helper" className="field-helper" aria-live="polite">
+        {passwordState.error && <span className="field-error" role="alert">{passwordState.error}</span>}
+        {!passwordState.error && passwordState.success && <span className="field-success">✓ Password aggiornata.</span>}
+      </div>
+      <button className="primary" disabled={passwordState.busy}>{passwordState.busy ? 'Attendi…' : 'Aggiorna password'}</button>
+    </form>
   </div>
 }
 
 function ContentGapsPage() {
   const { user } = useContext(AuthContext)
   const { loading, data, error } = useLoad(() => api('/admin/contenuti-mancanti/'))
-  if (!user.is_staff) return <Navigate to="/percorso" replace />
+  if (!user.is_staff) return <Navigate to="/lezioni" replace />
   if (loading) return <Loader />
   if (error) return <ErrorState message={error} />
   return <div className="page">
-    <span className="eyebrow">CONTROLLO EDITORIALE</span>
     <h1>Contenuti da completare</h1>
     <div className="summary-grid">
       <div><strong>{data.riepilogo.lezioni_mvp}</strong><span>lezioni MVP</span></div>
@@ -536,18 +788,20 @@ const Loader = () => <div className="loader" role="status" aria-live="polite">Ca
 const ErrorState = ({ message }) => <div className="error-state">
   <h2>Qualcosa non ha funzionato</h2>
   <p>{message}</p>
-  <Link to="/percorso">Torna al percorso</Link>
+  <Link to="/lezioni">Torna alle lezioni</Link>
 </div>
 
 export default function App() {
   return <AuthProvider><Layout><Routes>
+    <Route path="/" element={<HomePage />} />
     <Route path="/login" element={<AuthPage />} />
     <Route path="/registrati" element={<AuthPage register />} />
-    <Route path="/percorso" element={<Protected><PathPage /></Protected>} />
-    <Route path="/lezioni/:id" element={<Protected><LessonPage /></Protected>} />
+    <Route path="/lezioni" element={<LessonsPage />} />
+    <Route path="/percorso" element={<Navigate to="/lezioni" replace />} />
+    <Route path="/lezioni/:id" element={<LessonPage />} />
     <Route path="/progressi" element={<Protected><ProgressPage /></Protected>} />
     <Route path="/profilo" element={<Protected><ProfilePage /></Protected>} />
     <Route path="/contenuti-da-completare" element={<Protected><ContentGapsPage /></Protected>} />
-    <Route path="*" element={<Navigate to="/percorso" replace />} />
+    <Route path="*" element={<Navigate to="/" replace />} />
   </Routes></Layout></AuthProvider>
 }

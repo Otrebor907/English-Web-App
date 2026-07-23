@@ -1,11 +1,18 @@
+from collections import defaultdict
 from django.shortcuts import get_object_or_404
 from rest_framework import permissions, status
 from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from .models import Lezione, Progresso, Quesito, Quiz
-from .serializers import LessonDetailSerializer, LoginSerializer, ProgressSerializer, RegisterSerializer, UserSerializer
-from .services import completed_lesson_ids, lesson_state, mark_in_progress, missing_prerequisites, record_final_score, sync_progress
+from .serializers import (
+    ChangePasswordSerializer, LessonDetailSerializer, LoginSerializer, ProfileUpdateSerializer,
+    ProgressSerializer, RegisterSerializer, UserSerializer,
+)
+from .services import (
+    assign_lesson, assigned_lesson_ids, completed_lesson_ids, lesson_state, mark_in_progress,
+    missing_prerequisites, record_final_score, sync_progress, unassign_lesson,
+)
 
 
 def _answer_matches(question, answer):
@@ -36,13 +43,29 @@ def login(request):
     return Response({"token": token.key, "utente": UserSerializer(user).data})
 
 
-@api_view(["GET"])
+@api_view(["GET", "PATCH"])
 def profile(request):
+    if request.method == "PATCH":
+        serializer = ProfileUpdateSerializer(request.user, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
     return Response(UserSerializer(request.user).data)
 
 
+@api_view(["POST"])
+def change_password(request):
+    serializer = ChangePasswordSerializer(data=request.data, context={"request": request})
+    serializer.is_valid(raise_exception=True)
+    request.user.set_password(serializer.validated_data["nuova_password"])
+    request.user.save(update_fields=["password"])
+    Token.objects.filter(user=request.user).delete()
+    token = Token.objects.create(user=request.user)
+    return Response({"token": token.key})
+
+
 STATO_IN_PREPARAZIONE = "in_preparazione"
-STATI_LEZIONE_ESPOSTI = ["PUBBLICATA", "DA_SVILUPPARE"]
+# Ogni stato editoriale è esposto: chi non è "PUBBLICATA" appare come "in preparazione".
+STATI_LEZIONE_ESPOSTI = ["PUBBLICATA", "DA_SVILUPPARE", "DA_SVILUPPARE_MVP", "IN_SVILUPPO", "IN_REVISIONE", "COMPLETATA"]
 
 
 def _lesson_summary_payload(lesson, user, completed):
@@ -58,7 +81,7 @@ def _lesson_summary_payload(lesson, user, completed):
                 "punteggio": 0, "prerequisiti_mancanti": []}
     missing = missing_prerequisites(user, lesson, completed)
     progress = Progresso.objects.filter(utente=user, lezione=lesson).first()
-    return {**base, "stato": lesson_state(user, lesson, completed),
+    return {**base, "stato": lesson_state(user, lesson),
             "in_preparazione": False,
             "punteggio": progress.punteggio if progress else 0,
             "prerequisiti_mancanti": [{"id": item.id, "nome": item.nome} for item in missing]}
@@ -75,11 +98,36 @@ def path_lessons(request):
 
 
 @api_view(["GET"])
+@permission_classes([permissions.AllowAny])
+def lesson_index(request):
+    """Indice completo delle lezioni per area — pubblico, nessun filtro MVP, nessun blocco.
+    Stato e assegnazione sono informazioni personali: presenti solo per chi ha effettuato l'accesso."""
+    user = request.user if request.user.is_authenticated else None
+    assigned = assigned_lesson_ids(user) if user else set()
+    lessons = Lezione.objects.select_related("area", "livello").order_by("area_id", "ordine_percorso")
+    by_area = defaultdict(list)
+    for lesson in lessons:
+        in_prep = lesson.stato_id != "PUBBLICATA"
+        by_area[lesson.area_id].append({
+            "id": lesson.id, "nome": lesson.nome, "descrizione": lesson.descrizione,
+            "livello": lesson.livello_id, "priorita": lesson.priorita, "durata_min": lesson.durata_min,
+            "ordine_percorso": lesson.ordine_percorso, "in_preparazione": in_prep,
+            "stato": None if not user else ("in_preparazione" if in_prep else lesson_state(user, lesson)),
+            "assegnata": lesson.id in assigned,
+        })
+    return Response({area: by_area.get(area, []) for area in ["GRA", "VOC", "COM"]})
+
+
+@api_view(["GET"])
+@permission_classes([permissions.AllowAny])
 def lesson_detail(request, lesson_id):
+    """Il contenuto teorico è sempre pubblico. Stato personale, assegnazione e risultato
+    dell'ultimo esercizio sono inclusi soltanto per chi ha effettuato l'accesso."""
     lesson = get_object_or_404(
         Lezione.objects.select_related("area", "tipologia", "livello", "difficolta", "importanza_mvp").prefetch_related("sezioni", "quiz__quesiti"),
-        id=lesson_id, ordine_mvp__isnull=False, stato_id__in=STATI_LEZIONE_ESPOSTI,
+        id=lesson_id, stato_id__in=STATI_LEZIONE_ESPOSTI,
     )
+    user = request.user if request.user.is_authenticated else None
     if lesson.stato_id != "PUBBLICATA":
         return Response({
             "id": lesson.id, "area": lesson.area_id, "tipologia": lesson.tipologia.nome,
@@ -92,21 +140,35 @@ def lesson_detail(request, lesson_id):
             "importanza_mvp": lesson.importanza_mvp_id, "fase_roadmap": lesson.fase_roadmap,
             "sezioni": [], "quiz": [],
             "in_preparazione": True, "stato_utente": STATO_IN_PREPARAZIONE,
+            "assegnata": False, "autenticato": bool(user),
         })
-    state = lesson_state(request.user, lesson)
-    if state == Progresso.BLOCCATA:
-        missing = [{"id": item.id, "nome": item.nome} for item in missing_prerequisites(request.user, lesson)]
-        return Response({"detail": "Lezione bloccata", "prerequisiti_mancanti": missing}, status=status.HTTP_403_FORBIDDEN)
-    return Response({**LessonDetailSerializer(lesson).data, "in_preparazione": False, "stato_utente": state})
+    progress = Progresso.objects.filter(utente=user, lezione=lesson).first() if user else None
+    missing = [{"id": item.id, "nome": item.nome} for item in missing_prerequisites(user, lesson)] if user else []
+    return Response({
+        **LessonDetailSerializer(lesson).data, "in_preparazione": False,
+        "stato_utente": lesson_state(user, lesson) if user else None,
+        "prerequisiti_consigliati": missing,
+        "assegnata": bool(progress and progress.assegnata),
+        "ultimo_risultato": progress.punteggio if progress and progress.punteggio else None,
+        "autenticato": bool(user),
+    })
+
+
+@api_view(["POST", "DELETE"])
+def lesson_assignment(request, lesson_id):
+    """Aggiunge o rimuove la lezione dal percorso personale. Solo utenti autenticati (IsAuthenticated di default)."""
+    lesson = get_object_or_404(Lezione, id=lesson_id, stato_id="PUBBLICATA")
+    if request.method == "DELETE":
+        progress = unassign_lesson(request.user, lesson)
+    else:
+        progress = assign_lesson(request.user, lesson)
+    return Response(ProgressSerializer(progress).data if progress else {"assegnata": False})
 
 
 @api_view(["POST"])
 def start_lesson(request, lesson_id):
-    lesson = get_object_or_404(Lezione, id=lesson_id, ordine_mvp__isnull=False, stato_id="PUBBLICATA")
-    try:
-        progress = mark_in_progress(request.user, lesson)
-    except ValueError as exc:
-        return Response({"detail": str(exc)}, status=status.HTTP_403_FORBIDDEN)
+    lesson = get_object_or_404(Lezione, id=lesson_id, stato_id="PUBBLICATA")
+    progress = mark_in_progress(request.user, lesson)
     return Response(ProgressSerializer(progress).data)
 
 
@@ -115,18 +177,15 @@ def check_answer(request, lesson_id, question_id):
     question = get_object_or_404(
         Quesito.objects.select_related("quiz__lezione"),
         id=question_id, quiz__lezione_id=lesson_id,
-        quiz__lezione__ordine_mvp__isnull=False,
         quiz__lezione__stato_id="PUBBLICATA",
     )
-    if lesson_state(request.user, question.quiz.lezione) == Progresso.BLOCCATA:
-        return Response({"detail": "Lezione bloccata"}, status=status.HTTP_403_FORBIDDEN)
     correct = _answer_matches(question, request.data.get("risposta"))
     return Response({"corretta": correct, "risposta_corretta": question.risposta_corretta, "spiegazione": question.spiegazione})
 
 
 @api_view(["POST"])
 def submit_final_quiz(request, lesson_id):
-    lesson = get_object_or_404(Lezione, id=lesson_id, ordine_mvp__isnull=False, stato_id="PUBBLICATA")
+    lesson = get_object_or_404(Lezione, id=lesson_id, stato_id="PUBBLICATA")
     quiz = get_object_or_404(Quiz.objects.prefetch_related("quesiti"), lezione=lesson, modalita=Quiz.FINALE)
     answers = request.data.get("risposte", {})
     questions = list(quiz.quesiti.all())
@@ -148,8 +207,8 @@ def submit_final_quiz(request, lesson_id):
 
 @api_view(["GET"])
 def progress_list(request):
-    sync_progress(request.user)
-    progress = Progresso.objects.filter(utente=request.user).select_related("lezione").order_by("lezione__ordine_mvp")
+    """Le lezioni che l'utente ha assegnato al proprio percorso personale."""
+    progress = Progresso.objects.filter(utente=request.user, assegnata=True).select_related("lezione").order_by("-completata_il", "lezione__nome")
     return Response(ProgressSerializer(progress, many=True).data)
 
 

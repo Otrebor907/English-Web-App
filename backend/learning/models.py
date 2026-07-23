@@ -180,6 +180,7 @@ class Progresso(models.Model):
     punteggio = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     completata_il = models.DateTimeField(null=True, blank=True)
     minuti_effettivi = models.PositiveIntegerField(default=0)
+    assegnata = models.BooleanField(default=False)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["utente", "lezione"], name="progresso_unico")]
