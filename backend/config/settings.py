@@ -1,6 +1,8 @@
 import os
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
@@ -28,6 +30,7 @@ MIDDLEWARE = [
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -55,7 +58,15 @@ if os.getenv("POSTGRES_DB"):
 else:
     DATABASES = {"default": {"ENGINE": "django.db.backends.sqlite3", "NAME": BASE_DIR / "db.sqlite3"}}
 
-AUTH_PASSWORD_VALIDATORS = []
+# MinimumLengthValidator è volutamente assente: la lunghezza minima di 8
+# è già imposta da RegisterSerializer e ChangePasswordSerializer.
+# ATTENZIONE: questi validatori non vengono eseguiti da set_password().
+# Sono invocati esplicitamente nei serializer di learning/serializers.py.
+AUTH_PASSWORD_VALIDATORS = [
+    {"NAME": "django.contrib.auth.password_validation.CommonPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.NumericPasswordValidator"},
+    {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
+]
 AUTH_USER_MODEL = "learning.User"
 LANGUAGE_CODE = "it-it"
 TIME_ZONE = "Europe/Rome"
@@ -73,3 +84,23 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.TokenAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
 }
+
+SECRET_KEY_SEGNAPOSTO = "dev-only-change-me"
+
+
+def verifica_configurazione_produzione(debug, secret_key):
+    """Impedisce l'avvio in produzione con la chiave segnaposto.
+
+    Il rischio reale non è una configurazione sbagliata ma una dimenticata:
+    senza questo controllo l'app partirebbe silenziosamente insicura.
+    Estratta in funzione per poter essere collaudata: le impostazioni
+    vengono valutate una sola volta, all'import del modulo.
+    """
+    if not debug and secret_key == SECRET_KEY_SEGNAPOSTO:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY non valorizzata mentre DEBUG è disattivato. "
+            "Impostare una chiave lunga e casuale prima di avviare in produzione."
+        )
+
+
+verifica_configurazione_produzione(DEBUG, SECRET_KEY)

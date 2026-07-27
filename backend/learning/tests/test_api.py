@@ -50,7 +50,7 @@ class FullUserJourneyTests(APITestCase):
         client = APIClient()
         registration = client.post(
             "/api/auth/registrati/",
-            {"email": "journey@example.com", "password": "password123"},
+            {"email": "journey@example.com", "password": "Frittata8Verde!"},
             format="json",
         )
         self.assertEqual(registration.status_code, 201)

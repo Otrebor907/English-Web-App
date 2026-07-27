@@ -78,6 +78,15 @@ function groupByCategoria(lessons) {
   return [...groups.entries()].map(([categoria, items]) => ({ categoria, items }))
 }
 
+/** Gerarchia a tre livelli Macro argomento → Categoria → Lezioni, usata quando
+ *  nessuna area è selezionata (altrimenti l'area è già implicita nel filtro attivo). */
+function groupByAreaAndCategoria(lessons) {
+  return Object.entries(AREA)
+    .map(([code, info]) => ({ code, info, items: lessons.filter(l => l.area === code) }))
+    .filter(group => group.items.length > 0)
+    .map(group => ({ ...group, categorie: groupByCategoria(group.items) }))
+}
+
 function LessonSidebar() {
   const { data } = useLoad(() => api('/lezioni/indice/'))
   if (!data) return null
@@ -538,9 +547,11 @@ function LessonsPage() {
   if (area !== 'TUTTE') filtered = filtered.filter(l => l.area === area)
   if (categoria !== 'TUTTE') filtered = filtered.filter(l => l.categoria === categoria)
 
-  // Quando è selezionata un'area ma non una categoria specifica, mostro le lezioni
-  // raggruppate per categoria così la gerarchia resta visibile.
-  const grouped = area !== 'TUTTE' && categoria === 'TUTTE'
+  // Con "Tutte" le lezioni si vedono raggruppate su due livelli (Macro argomento → Categoria).
+  // Quando è selezionata un'area ma non una categoria specifica, restano raggruppate per
+  // categoria soltanto (l'area è già implicita nel filtro attivo).
+  const groupedByArea = area === 'TUTTE'
+  const groupedByCategoria = area !== 'TUTTE' && categoria === 'TUTTE'
 
   return <div className="page">
     <div className="page-heading">
@@ -587,7 +598,25 @@ function LessonsPage() {
 
     {filtered.length === 0 && <p className="empty">Nessuna lezione con questi filtri.</p>}
 
-    {grouped
+    {groupedByArea
+      ? groupByAreaAndCategoria(filtered).map(({ code, info, categorie }) => (
+          <section key={code} className={`lesson-area-group ${info.className}`} aria-label={info.label}>
+            <h2 className="lesson-area-heading">
+              {info.label} <span className="lesson-group-count">{categorie.reduce((n, g) => n + g.items.length, 0)}</span>
+            </h2>
+            {categorie.map(({ categoria: cat, items }) => (
+              <section key={cat} className="lesson-group" aria-label={cat}>
+                <h3 className="lesson-group-heading">{cat} <span className="lesson-group-count">{items.length}</span></h3>
+                <ul className="lesson-list">
+                  {items.map((lesson, index) => (
+                    <li key={lesson.id}><LessonCard lesson={lesson} index={index} user={user} /></li>
+                  ))}
+                </ul>
+              </section>
+            ))}
+          </section>
+        ))
+      : groupedByCategoria
       ? groupByCategoria(filtered).map(({ categoria: cat, items }) => (
           <section key={cat} className="lesson-group" aria-label={cat}>
             <h2 className="lesson-group-heading">{cat} <span className="lesson-group-count">{items.length}</span></h2>

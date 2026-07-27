@@ -155,8 +155,21 @@ main { min-height: calc(100vh - 150px) }
 .filter-row-sub { align-items: center; margin-top: calc(-1 * var(--space-sm)); margin-bottom: 0; padding-top: var(--space-sm); border-top: 1px dashed var(--color-rule) }
 .filter-label { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ink-2); margin-right: var(--space-2xs) }
 
+/* ---------- Gerarchia Macro argomento → Categoria nel catalogo (vista "Tutte") ---------- */
+.lesson-area-group { margin-bottom: var(--space-2xl) }
+.lesson-area-group:last-child { margin-bottom: 0 }
+.lesson-area-heading {
+  display: flex; align-items: center; gap: var(--space-sm); font-size: clamp(1.3rem, 1rem + 1vw, 1.6rem);
+  margin-bottom: var(--space-lg); padding-bottom: var(--space-sm); border-bottom: 2px solid var(--color-rule);
+}
+.lesson-area-group.grammar .lesson-area-heading { border-bottom-color: var(--color-mint-deep) }
+.lesson-area-group.vocabulary .lesson-area-heading { border-bottom-color: var(--color-accent-deep) }
+.lesson-area-group.communication .lesson-area-heading { border-bottom-color: var(--color-accent-2-deep) }
+.lesson-area-group .lesson-group { padding-left: var(--space-lg); border-left: 2px solid var(--color-rule) }
+
 /* ---------- Gruppi di lezioni per categoria nel catalogo ---------- */
 .lesson-group { margin-bottom: var(--space-xl) }
+.lesson-group:last-child { margin-bottom: 0 }
 .lesson-group-heading { display: flex; align-items: center; gap: var(--space-sm); font-size: 1.15rem; margin-bottom: var(--space-md) }
 .lesson-group-count { font-size: 0.7rem; font-weight: 600; color: var(--color-ink-2); background: var(--color-paper-2); padding: var(--space-3xs) var(--space-xs); border-radius: var(--radius-pill) }
 .filter-chip {
@@ -352,7 +365,7 @@ footer {
   position: absolute; inset: 0; z-index: var(--z-raised); display: flex; flex-direction: column;
   align-items: center; justify-content: center; gap: var(--space-md); text-align: center;
   padding: var(--space-xl); border-radius: var(--radius-card); border: 1px solid var(--color-rule);
-  background: color-mix(in oklch, var(--color-paper) 90%, transparent); backdrop-filter: blur(4px);
+  background: var(--color-paper);
 }
 .exercise-gate p { max-width: 38ch; font-weight: 700; color: var(--color-ink); font-size: 1.05rem; line-height: 1.5; margin: 0 }
 .exercise-gate-actions { display: flex; gap: var(--space-sm); flex-wrap: wrap; justify-content: center }
@@ -466,6 +479,7 @@ footer {
   .auth-copy { display: none }
   .page { padding: var(--space-2xl) var(--space-sm) }
   .page-heading { align-items: flex-start; flex-direction: column }
+  .lesson-area-group .lesson-group { padding-left: var(--space-sm) }
   .progress-ring { width: 82px; height: 82px; border-width: 7px; align-self: flex-start; margin-top: -6px }
   .lesson-card { grid-template-columns: 50px 1fr auto; padding: var(--space-md) var(--space-sm); gap: var(--space-sm) }
   .area-icon { width: 48px; height: 48px }

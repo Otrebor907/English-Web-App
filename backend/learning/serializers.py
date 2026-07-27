@@ -1,6 +1,25 @@
 from django.contrib.auth import authenticate
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from .models import Lezione, Progresso, Quesito, Quiz, SezioneLezione, User
+
+
+def _valida_password(password, utente, campo=None):
+    """Esegue AUTH_PASSWORD_VALIDATORS e converte l'errore nel formato DRF.
+
+    Necessario perché `set_password()` e `create_user()` NON eseguono i
+    validatori: Django li applica solo tramite i form. Senza questa chiamata
+    esplicita, AUTH_PASSWORD_VALIDATORS resterebbe una lista decorativa.
+
+    `campo` aggancia l'errore a quel nome invece che a `non_field_errors`,
+    così il client può evidenziare l'input giusto.
+    """
+    try:
+        validate_password(password, utente)
+    except DjangoValidationError as errore:
+        messaggi = list(errore.messages)
+        raise serializers.ValidationError({campo: messaggi} if campo else messaggi)
 
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -12,6 +31,12 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_email(self, value):
         return value.strip().lower()
+
+    def validate(self, attrs):
+        # UserAttributeSimilarityValidator confronta la password con gli
+        # attributi dell'utente: serve un'istanza, qui non ancora salvata.
+        _valida_password(attrs["password"], User(email=attrs.get("email", "")), campo="password")
+        return attrs
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
@@ -57,6 +82,10 @@ class ChangePasswordSerializer(serializers.Serializer):
     def validate_password_attuale(self, value):
         if not self.context["request"].user.check_password(value):
             raise serializers.ValidationError("Password attuale non corretta.")
+        return value
+
+    def validate_nuova_password(self, value):
+        _valida_password(value, self.context["request"].user)
         return value
 
 
