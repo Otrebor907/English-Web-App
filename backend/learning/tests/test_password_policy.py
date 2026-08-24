@@ -18,7 +18,9 @@ class RegistrazionePolicyPasswordTests(APITestCase):
 
     def test_password_comune_respinta(self):
         risposta = self.client.post(
-            self.URL, {"email": "tizio@example.com", "password": "password123"}, format="json"
+            self.URL,
+            {"email": "tizio@example.com", "nome": "Tizio", "cognome": "Rossi", "password": "password123"},
+            format="json",
         )
         self.assertEqual(risposta.status_code, 400)
         self.assertIn("password", risposta.data)
@@ -26,7 +28,9 @@ class RegistrazionePolicyPasswordTests(APITestCase):
 
     def test_password_solo_numerica_respinta(self):
         risposta = self.client.post(
-            self.URL, {"email": "caio@example.com", "password": "83947261"}, format="json"
+            self.URL,
+            {"email": "caio@example.com", "nome": "Caio", "cognome": "Bianchi", "password": "83947261"},
+            format="json",
         )
         self.assertEqual(risposta.status_code, 400)
         self.assertFalse(User.objects.filter(email="caio@example.com").exists())
@@ -34,7 +38,12 @@ class RegistrazionePolicyPasswordTests(APITestCase):
     def test_password_simile_alla_email_respinta(self):
         risposta = self.client.post(
             self.URL,
-            {"email": "supermariobros@example.com", "password": "supermariobros"},
+            {
+                "email": "supermariobros@example.com",
+                "nome": "Super",
+                "cognome": "Mario",
+                "password": "supermariobros",
+            },
             format="json",
         )
         self.assertEqual(risposta.status_code, 400)
@@ -43,13 +52,17 @@ class RegistrazionePolicyPasswordTests(APITestCase):
     def test_password_troppo_corta_respinta(self):
         """Copertura preesistente: min_length=8 sul serializer."""
         risposta = self.client.post(
-            self.URL, {"email": "breve@example.com", "password": "Ab1!"}, format="json"
+            self.URL,
+            {"email": "breve@example.com", "nome": "Breve", "cognome": "Corti", "password": "Ab1!"},
+            format="json",
         )
         self.assertEqual(risposta.status_code, 400)
 
     def test_password_robusta_accettata(self):
         risposta = self.client.post(
-            self.URL, {"email": "valido@example.com", "password": "Frittata8Verde!"}, format="json"
+            self.URL,
+            {"email": "valido@example.com", "nome": "Valido", "cognome": "Verdi", "password": "Frittata8Verde!"},
+            format="json",
         )
         self.assertEqual(risposta.status_code, 201)
         self.assertTrue(User.objects.filter(email="valido@example.com").exists())
