@@ -9,4 +9,5 @@ frontend/dist/
 .env
 .DS_Store
 .hallmark/
-
+.claude/
+backend/scripts/__pycache__/

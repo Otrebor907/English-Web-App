@@ -93,12 +93,13 @@ Questa è l'unica "app" Django del progetto: contiene modelli (le tabelle del da
 
 - **`models.py`** — definisce le **tabelle del database** come classi Python (questo si chiama *ORM*: Object-Relational Mapping, cioè "scrivi classi Python, Django le traduce in tabelle SQL"). Le principali:
   - `User`: l'utente, con email al posto dello username.
-  - `Lezione`: una lezione (grammatica/vocabolario/comunicazione), con area, livello, priorità, ordine nel percorso, ecc.
+  - `Lezione`: una lezione (grammatica/vocabolario/comunicazione), con area, livello, ordine nel percorso, ecc. Espone anche `prerequisito_derivato`, un campo calcolato (non una colonna) che ricava l'ID della lezione precedente nella stessa serie decrementando il suffisso numerico.
   - `Prerequisito`: collega due lezioni dicendo "per fare X è consigliato aver fatto Y" (relazione "molti-a-molti" tramite tabella intermedia).
-  - `SezioneLezione`: un blocco di contenuto teorico dentro una lezione (es. "Regola", "Esempio", "Errore tipico").
-  - `Quiz` e `Quesito`: il quiz (guidato o finale) e le singole domande.
+  - `StrutturaLezione` (tabella `struttura_lezione`): un blocco di contenuto teorico dentro una lezione (es. "Regola", "Esempio", "Errore tipico").
+  - `StrutturaQuiz` (tabella `struttura_quiz`): il quiz della lezione, in modalità guidata o finale.
+  - `QuesitoGuidato` e `QuesitoFinale` (tabelle `struttura_quiz_guidato` e `struttura_quiz_finale`): le singole domande, separate per modalità. Hanno colonne identiche, garantite da una classe base astratta condivisa. Attenzione: gli `id` sono univoci solo dentro la propria tabella, per questo la rotta di verifica include la modalità.
   - `Progresso`: tiene traccia, per ogni coppia utente+lezione, dello stato (bloccata/disponibile/in corso/completata) e del punteggio migliore ottenuto.
-  - Le classi `Area`, `Tipologia`, `Livello`, `Difficolta`, `StatoLezione`, `Importanza` sono semplici tabelle "etichetta → nome" (dette *lookup*), usate per validare che i valori inseriti siano tra quelli ammessi.
+  - Le classi `Area`, `Tipologia`, `Livello`, `Difficolta` sono tabelle di mapping "codice → etichetta", su Neon chiamate `mapping_area_lezione`, `mapping_tipologia`, `mapping_livello`, `mapping_difficolta_lezione`. `StatoLezione` resta `learning_statolezione`. Servono a validare che i valori inseriti siano tra quelli ammessi.
 - **`serializers.py`** — i **traduttori** tra oggetti Python/database e JSON (il formato che il frontend capisce). Ogni serializer dice "quali campi esporre e come validarli in ingresso". Es. `RegisterSerializer` valida che la password abbia almeno 8 caratteri prima di creare l'utente.
 - **`views.py`** — le **funzioni che rispondono alle richieste HTTP** (gli endpoint). Ogni funzione decorata con `@api_view([...])` è un endpoint: riceve una richiesta, fa i controlli, interroga il database tramite i modelli, e restituisce una `Response` in JSON. Esempi: `register` (crea utente + genera token), `path_lessons` (elenco delle lezioni del percorso MVP), `submit_final_quiz` (calcola il punteggio del quiz **lato server**, mai fidandosi di un punteggio calcolato dal browser).
 - **`urls.py`** — collega ogni indirizzo (es. `POST /api/auth/login/`) alla funzione corrispondente in `views.py`.
@@ -107,7 +108,7 @@ Questa è l'unica "app" Django del progetto: contiene modelli (le tabelle del da
   - `record_final_score`: salva il punteggio migliore, e se ≥ 70% marca la lezione come completata.
 - **`admin.py`** — configura il **Django Admin**, un pannello di amministrazione web generato automaticamente da Django per gestire i dati (utenti, lezioni, quiz...) senza scrivere query manuali. Raggiungibile su `/admin/`.
 - **`apps.py`** — file di configurazione minimo richiesto da Django per registrare l'app `learning`. Quasi mai lo tocchi.
-- **`importer.py`** — il cuore dell'importazione contenuti: legge un file JSON o un foglio Excel (`.xlsx`), lo valida pesantemente (campi obbligatori, aree ammesse, conteggio sezioni per lezione, coerenza priorità/importanza, niente campi "audio"...) e infine scrive tutto nel database **in una singola transazione atomica** (`@transaction.atomic`): o va tutto a buon fine, o non si salva nulla — non esistono stati intermedi corrotti.
+- **`importer.py`** — il cuore dell'importazione contenuti: legge un file JSON o un foglio Excel (`.xlsx`), lo valida pesantemente (campi obbligatori, aree ammesse, conteggio sezioni per lezione, niente campi "audio"...) e infine scrive tutto nel database **in una singola transazione atomica** (`@transaction.atomic`): o va tutto a buon fine, o non si salva nulla — non esistono stati intermedi corrotti.
 - **`markdown_source.py`** — un parser che legge i brief editoriali scritti a mano in `lezioni_markdown/*.md` (teoria + esercizio guidato + quiz finale con soluzioni) e pubblica **una singola lezione alla volta**, senza toccare le altre. Usa espressioni regolari per riconoscere pattern come `❌ sbagliato → ✅ corretto — perché` o `**Risposta: X**`.
 
 ### 4.4 `backend/learning/management/commands/` — comandi custom da terminale

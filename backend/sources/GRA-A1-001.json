@@ -7,8 +7,6 @@
   "difficolta": "Bassa",
   "ordine_percorso": 1,
   "ordine_mvp": 1,
-  "importanza_mvp": "Essenziale",
-  "priorita": "P0",
   "fase_roadmap": "Fase 1",
   "prerequisiti": []
 }

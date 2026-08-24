@@ -25,6 +25,10 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_only_change_me}
       POSTGRES_HOST: database
       POSTGRES_PORT: 5432
+      # Il Postgres di questo compose gira sulla rete interna di Docker e non
+      # espone TLS: senza questa riga il default "require" di settings.py
+      # (pensato per Neon) farebbe fallire la connessione.
+      POSTGRES_SSLMODE: ${POSTGRES_SSLMODE:-disable}
     command: ["sh", "-c", "python manage.py migrate --noinput && gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3"]
     depends_on:
       database:

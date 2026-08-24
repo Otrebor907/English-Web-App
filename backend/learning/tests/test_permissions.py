@@ -2,7 +2,7 @@
 from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase
 from learning.importer import import_content
-from learning.models import Progresso, Quesito, User
+from learning.models import Progresso, QuesitoFinale, QuesitoGuidato, User
 
 
 FIXTURE = "fixtures/contenuti_minimi.json"
@@ -63,8 +63,8 @@ class AnonymousWriteBlockedTests(APITestCase):
         self.assertEqual(response.status_code, 401)
 
     def test_anonymous_cannot_check_answer(self):
-        question = Quesito.objects.filter(quiz__lezione_id="DEMO-GRA-001").first()
-        response = self.client.post(f"/api/lezioni/DEMO-GRA-001/quesiti/{question.id}/verifica/", {"risposta": "x"}, format="json")
+        question = QuesitoGuidato.objects.filter(quiz__lezione_id="DEMO-GRA-001").first()
+        response = self.client.post(f"/api/lezioni/DEMO-GRA-001/quiz/guidato/quesiti/{question.id}/verifica/", {"risposta": "x"}, format="json")
         self.assertEqual(response.status_code, 401)
 
     def test_anonymous_cannot_submit_final_quiz(self):
@@ -110,7 +110,7 @@ class AuthenticatedAssignmentTests(APITestCase):
     def test_can_exercise_a_lesson_without_assigning_it_first(self):
         lesson_id = "DEMO-GRA-001"
         self.assertFalse(Progresso.objects.filter(utente=self.user, lezione_id=lesson_id, assegnata=True).exists())
-        questions = Quesito.objects.filter(quiz__lezione_id=lesson_id, quiz__modalita="finale")
+        questions = QuesitoFinale.objects.filter(quiz__lezione_id=lesson_id)
         answers = {str(question.id): question.risposta_corretta for question in questions}
         result = self.client.post(f"/api/lezioni/{lesson_id}/quiz-finale/", {"risposte": answers}, format="json")
         self.assertEqual(result.status_code, 200)
@@ -118,7 +118,7 @@ class AuthenticatedAssignmentTests(APITestCase):
 
     def test_completing_final_quiz_auto_assigns_the_lesson(self):
         lesson_id = "DEMO-GRA-001"
-        questions = Quesito.objects.filter(quiz__lezione_id=lesson_id, quiz__modalita="finale")
+        questions = QuesitoFinale.objects.filter(quiz__lezione_id=lesson_id)
         answers = {str(question.id): question.risposta_corretta for question in questions}
         self.client.post(f"/api/lezioni/{lesson_id}/quiz-finale/", {"risposte": answers}, format="json")
         progress = Progresso.objects.get(utente=self.user, lezione_id=lesson_id)

@@ -12,7 +12,7 @@ from pathlib import Path
 
 from django.db import transaction
 
-from .models import Lezione, Quesito, Quiz, SezioneLezione, StatoLezione
+from .models import Lezione, QuesitoFinale, QuesitoGuidato, StatoLezione, StrutturaLezione, StrutturaQuiz
 
 
 CONTENT_HEADING = "Contenuto definitivo da pubblicare"
@@ -127,7 +127,7 @@ def _parse_guided(body):
         risposta = _strip_md(m.group(1)).rstrip(".")
         testo = _strip_md(re.sub(r"\*\*Risposta:.*?\*\*", "", text)).strip()
         quesiti.append({
-            "ordine": ordine, "tipo": Quesito.COMPLETAMENTO, "testo": testo,
+            "ordine": ordine, "tipo": QuesitoGuidato.COMPLETAMENTO, "testo": testo,
             "opzioni": [], "risposta_corretta": risposta,
             "spiegazione": f"Risposta corretta: «{risposta}».",
         })
@@ -155,10 +155,10 @@ def _parse_final(questions_body, solutions_body):
         raw = questions[num]
         risposta, spiegazione = _parse_solution(solutions.get(num, ""))
         opzioni = []
-        tipo = Quesito.COMPLETAMENTO
+        tipo = QuesitoFinale.COMPLETAMENTO
         testo = _strip_md(raw)
         if raw.strip().lower().startswith("scegli:"):
-            tipo = Quesito.SCELTA_MULTIPLA
+            tipo = QuesitoFinale.SCELTA_MULTIPLA
             choice_part = raw.split(":", 1)[1]
             opzioni = [_strip_md(o) for o in choice_part.split("/") if o.strip()]
             testo = "Scegli la frase corretta."
@@ -213,9 +213,9 @@ def publish_markdown_lesson(path):
     lesson = Lezione.objects.get(id=data["id"])
 
     # Sezioni: rimpiazza solo quelle di questa lezione.
-    SezioneLezione.objects.filter(lezione=lesson).delete()
-    SezioneLezione.objects.bulk_create([
-        SezioneLezione(
+    StrutturaLezione.objects.filter(lezione=lesson).delete()
+    StrutturaLezione.objects.bulk_create([
+        StrutturaLezione(
             lezione=lesson, ordine=i, tipo_sezione=s["tipo_sezione"],
             contenuto=s["contenuto"], formato_web=s["formato_web"],
         )
@@ -223,15 +223,15 @@ def publish_markdown_lesson(path):
     ])
 
     # Quiz: rimpiazza solo quelli di questa lezione.
-    Quiz.objects.filter(lezione=lesson).delete()
-    for modalita, titolo, quesiti in (
-        (Quiz.GUIDATO, "Esercizio guidato", data["guidato"]),
-        (Quiz.FINALE, "Quiz finale", data["finale"]),
+    StrutturaQuiz.objects.filter(lezione=lesson).delete()
+    for modalita, titolo, quesiti, model in (
+        (StrutturaQuiz.GUIDATO, "Esercizio guidato", data["guidato"], QuesitoGuidato),
+        (StrutturaQuiz.FINALE, "Quiz finale", data["finale"], QuesitoFinale),
     ):
         if not quesiti:
             continue
-        quiz = Quiz.objects.create(lezione=lesson, modalita=modalita, titolo=titolo)
-        Quesito.objects.bulk_create([Quesito(quiz=quiz, **q) for q in quesiti])
+        quiz = StrutturaQuiz.objects.create(lezione=lesson, modalita=modalita, titolo=titolo)
+        model.objects.bulk_create([model(quiz=quiz, **q) for q in quesiti])
 
     # Pubblica (garantendo l'esistenza della lookup di stato).
     StatoLezione.objects.get_or_create(code="PUBBLICATA", defaults={"nome": "Pubblicata"})

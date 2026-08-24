@@ -20,7 +20,7 @@ class ImportAndProgressTests(TestCase):
 
     def test_fixture_has_only_three_areas_and_persists_priority(self):
         self.assertSetEqual(set(Area.objects.values_list("code", flat=True)), {"GRA", "VOC", "COM"})
-        self.assertEqual(Lezione.objects.get(id="DEMO-GRA-001").priorita, "P0")
+        self.assertEqual(Lezione.objects.get(id="DEMO-GRA-001").ordine_mvp, 1)
 
     def test_lessons_are_never_locked_by_prerequisites(self):
         grammar = Lezione.objects.get(id="DEMO-GRA-001")

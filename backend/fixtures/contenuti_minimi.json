@@ -1,56 +1,558 @@
 {
-  "meta": {"tipo":"fixture_tecnica","catalogo_atteso":3,"mvp_atteso":3,"nota":"Fixture tecnica: ID DEMO-* separati dal catalogo editoriale reale (es. GRA-A1-001). Usata per collaudo del motore, mai come contenuto pubblicato."},
+  "meta": {
+    "tipo": "fixture_tecnica",
+    "catalogo_atteso": 3,
+    "mvp_atteso": 3,
+    "nota": "Fixture tecnica: ID DEMO-* separati dal catalogo editoriale reale (es. GRA-A1-001). Usata per collaudo del motore, mai come contenuto pubblicato."
+  },
   "liste": {
-    "area": [{"code":"GRA","nome":"Grammatica"},{"code":"VOC","nome":"Vocabolario"},{"code":"COM","nome":"Comunicazione"}],
-    "tipologia": [{"code":"FONDAMENTI","nome":"Fondamenti"},{"code":"LESSICO","nome":"Lessico"},{"code":"FUNZIONI","nome":"Funzioni comunicative"}],
-    "livello": [{"code":"A1","nome":"A1"},{"code":"A2","nome":"A2"},{"code":"B1","nome":"B1"},{"code":"B2","nome":"B2"},{"code":"C1","nome":"C1"}],
-    "difficolta": [{"code":"Bassa","nome":"Bassa"},{"code":"Media","nome":"Media"},{"code":"Alta","nome":"Alta"}],
-    "stato": [{"code":"BOZZA","nome":"Bozza"},{"code":"PUBBLICATA","nome":"Pubblicata"},{"code":"DA_SVILUPPARE","nome":"Da sviluppare (MVP)"}],
-    "importanza": [{"code":"Essenziale","nome":"Essenziale"},{"code":"Consigliata","nome":"Consigliata"},{"code":"Secondaria","nome":"Secondaria"}]
+    "area": [
+      {
+        "code": "GRA",
+        "nome": "Grammatica"
+      },
+      {
+        "code": "VOC",
+        "nome": "Vocabolario"
+      },
+      {
+        "code": "COM",
+        "nome": "Comunicazione"
+      }
+    ],
+    "tipologia": [
+      {
+        "code": "FONDAMENTI",
+        "nome": "Fondamenti"
+      },
+      {
+        "code": "LESSICO",
+        "nome": "Lessico"
+      },
+      {
+        "code": "FUNZIONI",
+        "nome": "Funzioni comunicative"
+      }
+    ],
+    "livello": [
+      {
+        "code": "A1",
+        "nome": "A1"
+      },
+      {
+        "code": "A2",
+        "nome": "A2"
+      },
+      {
+        "code": "B1",
+        "nome": "B1"
+      },
+      {
+        "code": "B2",
+        "nome": "B2"
+      },
+      {
+        "code": "C1",
+        "nome": "C1"
+      }
+    ],
+    "difficolta": [
+      {
+        "code": "Bassa",
+        "nome": "Bassa"
+      },
+      {
+        "code": "Media",
+        "nome": "Media"
+      },
+      {
+        "code": "Alta",
+        "nome": "Alta"
+      }
+    ],
+    "stato": [
+      {
+        "code": "BOZZA",
+        "nome": "Bozza"
+      },
+      {
+        "code": "PUBBLICATA",
+        "nome": "Pubblicata"
+      },
+      {
+        "code": "DA_SVILUPPARE",
+        "nome": "Da sviluppare (MVP)"
+      }
+    ]
   },
   "lezioni": [
-    {"id":"DEMO-GRA-001","area":"GRA","tipologia":"FONDAMENTI","nome":"[DEMO] Il verbo essere: to be","descrizione":"Presentarsi con frasi semplici usando am, is e are. Contenuto tecnico di collaudo.","livello":"A1","difficolta":"Bassa","ordine_percorso":1,"obiettivo_didattico":"Usare il presente di to be per dire chi sei.","competenze":["presentarsi","costruire frasi affermative"],"durata_min":15,"errori_tipici":["Omettere il soggetto","Usare have al posto di be per l'età"],"stato":"PUBBLICATA","priorita":"P0","ordine_mvp":1,"importanza_mvp":"Essenziale","fase_roadmap":"MVP"},
-    {"id":"DEMO-VOC-001","area":"VOC","tipologia":"LESSICO","nome":"[DEMO] Saluti e presentazioni","descrizione":"Le parole essenziali per iniziare e chiudere una conversazione. Contenuto tecnico di collaudo.","livello":"A1","difficolta":"Bassa","ordine_percorso":2,"obiettivo_didattico":"Salutare e scambiare informazioni di base.","competenze":["salutare","presentarsi"],"durata_min":12,"errori_tipici":["Tradurre letteralmente buongiorno in ogni contesto"],"stato":"PUBBLICATA","priorita":"P0","ordine_mvp":2,"importanza_mvp":"Essenziale","fase_roadmap":"MVP"},
-    {"id":"DEMO-COM-001","area":"COM","tipologia":"FUNZIONI","nome":"[DEMO] La tua prima presentazione","descrizione":"Metti insieme saluti e frasi brevi in un dialogo. Contenuto tecnico di collaudo.","livello":"A1","difficolta":"Bassa","ordine_percorso":3,"obiettivo_didattico":"Sostenere un breve scambio di presentazione.","competenze":["aprire una conversazione","rispondere a domande personali"],"durata_min":18,"errori_tipici":["Rispondere con frasi italiane tradotte parola per parola"],"stato":"PUBBLICATA","priorita":"P0","ordine_mvp":3,"importanza_mvp":"Essenziale","fase_roadmap":"MVP"}
+    {
+      "id": "DEMO-GRA-001",
+      "area": "GRA",
+      "tipologia": "FONDAMENTI",
+      "nome": "[DEMO] Il verbo essere: to be",
+      "descrizione": "Presentarsi con frasi semplici usando am, is e are. Contenuto tecnico di collaudo.",
+      "livello": "A1",
+      "difficolta": "Bassa",
+      "ordine_percorso": 1,
+      "obiettivo_didattico": "Usare il presente di to be per dire chi sei.",
+      "competenze": [
+        "presentarsi",
+        "costruire frasi affermative"
+      ],
+      "durata_min": 15,
+      "errori_tipici": [
+        "Omettere il soggetto",
+        "Usare have al posto di be per l'età"
+      ],
+      "stato": "PUBBLICATA",
+      "ordine_mvp": 1,
+      "fase_roadmap": "MVP"
+    },
+    {
+      "id": "DEMO-VOC-001",
+      "area": "VOC",
+      "tipologia": "LESSICO",
+      "nome": "[DEMO] Saluti e presentazioni",
+      "descrizione": "Le parole essenziali per iniziare e chiudere una conversazione. Contenuto tecnico di collaudo.",
+      "livello": "A1",
+      "difficolta": "Bassa",
+      "ordine_percorso": 2,
+      "obiettivo_didattico": "Salutare e scambiare informazioni di base.",
+      "competenze": [
+        "salutare",
+        "presentarsi"
+      ],
+      "durata_min": 12,
+      "errori_tipici": [
+        "Tradurre letteralmente buongiorno in ogni contesto"
+      ],
+      "stato": "PUBBLICATA",
+      "ordine_mvp": 2,
+      "fase_roadmap": "MVP"
+    },
+    {
+      "id": "DEMO-COM-001",
+      "area": "COM",
+      "tipologia": "FUNZIONI",
+      "nome": "[DEMO] La tua prima presentazione",
+      "descrizione": "Metti insieme saluti e frasi brevi in un dialogo. Contenuto tecnico di collaudo.",
+      "livello": "A1",
+      "difficolta": "Bassa",
+      "ordine_percorso": 3,
+      "obiettivo_didattico": "Sostenere un breve scambio di presentazione.",
+      "competenze": [
+        "aprire una conversazione",
+        "rispondere a domande personali"
+      ],
+      "durata_min": 18,
+      "errori_tipici": [
+        "Rispondere con frasi italiane tradotte parola per parola"
+      ],
+      "stato": "PUBBLICATA",
+      "ordine_mvp": 3,
+      "fase_roadmap": "MVP"
+    }
   ],
-  "prerequisiti": [{"lezione_id":"DEMO-VOC-001","richiede_lezione_id":"DEMO-GRA-001"},{"lezione_id":"DEMO-COM-001","richiede_lezione_id":"DEMO-VOC-001"}],
+  "prerequisiti": [
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "richiede_lezione_id": "DEMO-GRA-001"
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "richiede_lezione_id": "DEMO-VOC-001"
+    }
+  ],
   "sezioni": [
-    {"lezione_id":"DEMO-GRA-001","ordine":1,"tipo_sezione":"Obiettivo","formato_web":"testo","contenuto":{"titolo":"Tre forme, un solo verbo","testo":"In inglese to be cambia in am, is e are a seconda del soggetto."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":2,"tipo_sezione":"Regola","formato_web":"lista","contenuto":{"titolo":"La forma affermativa","elementi":["I am (io sono)","You are (tu sei)","He/She is (lui/lei è)","We/They are (noi/loro siamo/sono)"]}},
-    {"lezione_id":"DEMO-GRA-001","ordine":3,"tipo_sezione":"Esempio","formato_web":"testo","contenuto":{"titolo":"Presentati","esempio":"I am Marco. I am Italian.","traduzione":"Sono Marco. Sono italiano."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":4,"tipo_sezione":"Errore tipico","formato_web":"errore_box","contenuto":{"errato":"I have 30 years.","corretto":"I am 30 years old.","perche":"In inglese l'età si esprime con to be, non con to have."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":5,"tipo_sezione":"Contrazioni","formato_web":"testo","contenuto":{"titolo":"Come si parla davvero","testo":"Nel parlato si usano spesso le forme contratte: I'm, you're, he's, she's, we're, they're."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":6,"tipo_sezione":"Negativa","formato_web":"testo","contenuto":{"titolo":"Aggiungi not","esempio":"I am not tired.","traduzione":"Non sono stanco."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":7,"tipo_sezione":"Domanda","formato_web":"testo","contenuto":{"titolo":"Inverti verbo e soggetto","esempio":"Are you Italian?","traduzione":"Sei italiano?"}},
-    {"lezione_id":"DEMO-GRA-001","ordine":8,"tipo_sezione":"Risposta breve","formato_web":"testo","contenuto":{"titolo":"Yes, I am","testo":"Nelle risposte brevi ripeti il soggetto e la forma corretta di to be."}},
-    {"lezione_id":"DEMO-GRA-001","ordine":9,"tipo_sezione":"Riepilogo","formato_web":"lista","contenuto":{"titolo":"Ricorda","elementi":["I am","He/She is","You/We/They are","Per l'età usa to be"]}},
-    {"lezione_id":"DEMO-VOC-001","ordine":1,"tipo_sezione":"Obiettivo","formato_web":"testo","contenuto":{"titolo":"Inizia una conversazione","testo":"Scegli il saluto in base al momento e al grado di formalità."}},
-    {"lezione_id":"DEMO-VOC-001","ordine":2,"tipo_sezione":"Parole chiave","formato_web":"lista","contenuto":{"titolo":"I saluti essenziali","elementi":["Hello — Ciao/Salve","Hi — Ciao (informale)","Good morning — Buongiorno","Good evening — Buonasera"]}},
-    {"lezione_id":"DEMO-VOC-001","ordine":3,"tipo_sezione":"Esempio","formato_web":"testo","contenuto":{"titolo":"Un primo scambio","esempio":"Hello, I'm Anna. Nice to meet you.","traduzione":"Ciao, sono Anna. Piacere di conoscerti."}},
-    {"lezione_id":"DEMO-VOC-001","ordine":4,"tipo_sezione":"Errore tipico","formato_web":"errore_box","contenuto":{"errato":"Good evening! (quando vai via)","corretto":"Good night! (quando vai via la sera)","perche":"Good evening apre un incontro; good night si usa per congedarsi o andare a dormire."}},
-    {"lezione_id":"DEMO-VOC-001","ordine":5,"tipo_sezione":"Presentarsi","formato_web":"lista","contenuto":{"titolo":"Frasi utili","elementi":["My name is… — Mi chiamo…","I'm from… — Vengo da…","Nice to meet you — Piacere"]}},
-    {"lezione_id":"DEMO-VOC-001","ordine":6,"tipo_sezione":"Congedarsi","formato_web":"testo","contenuto":{"titolo":"Chiudi con naturalezza","esempio":"See you soon. Have a nice day!","traduzione":"A presto. Buona giornata!"}},
-    {"lezione_id":"DEMO-VOC-001","ordine":7,"tipo_sezione":"Riepilogo","formato_web":"testo","contenuto":{"titolo":"Scegli la formula giusta","testo":"Usa hello in modo neutro, hi in modo informale e good morning/evening nei contesti più formali."}},
-    {"lezione_id":"DEMO-COM-001","ordine":1,"tipo_sezione":"Scenario","formato_web":"testo","contenuto":{"titolo":"Incontri una persona nuova","testo":"Immagina di essere a un corso internazionale e di parlare con un nuovo compagno."}},
-    {"lezione_id":"DEMO-COM-001","ordine":2,"tipo_sezione":"Apertura","formato_web":"testo","contenuto":{"titolo":"Saluta e dì il tuo nome","esempio":"Hi, I'm Luca. What's your name?","traduzione":"Ciao, sono Luca. Come ti chiami?"}},
-    {"lezione_id":"DEMO-COM-001","ordine":3,"tipo_sezione":"Risposta","formato_web":"testo","contenuto":{"titolo":"Rispondi e ricambia","esempio":"I'm Sarah. Nice to meet you, Luca.","traduzione":"Sono Sarah. Piacere di conoscerti, Luca."}},
-    {"lezione_id":"DEMO-COM-001","ordine":4,"tipo_sezione":"Errore tipico","formato_web":"errore_box","contenuto":{"errato":"How do you call?","corretto":"What's your name?","perche":"La domanda italiana “come ti chiami?” non si traduce parola per parola."}},
-    {"lezione_id":"DEMO-COM-001","ordine":5,"tipo_sezione":"Provenienza","formato_web":"testo","contenuto":{"titolo":"Chiedi da dove viene","esempio":"Where are you from? I'm from Italy.","traduzione":"Di dove sei? Vengo dall'Italia."}},
-    {"lezione_id":"DEMO-COM-001","ordine":6,"tipo_sezione":"Dialogo","formato_web":"lista","contenuto":{"titolo":"Il dialogo completo","elementi":["A: Hello, I'm Paolo.","B: Hi Paolo, I'm Emma.","A: Nice to meet you. Where are you from?","B: I'm from London."]}},
-    {"lezione_id":"DEMO-COM-001","ordine":7,"tipo_sezione":"Strategia","formato_web":"testo","contenuto":{"titolo":"Frasi brevi funzionano","testo":"Non cercare frasi complesse: saluto, nome e provenienza bastano per il primo scambio."}},
-    {"lezione_id":"DEMO-COM-001","ordine":8,"tipo_sezione":"Riepilogo","formato_web":"lista","contenuto":{"titolo":"La sequenza","elementi":["Saluta","Presentati","Chiedi il nome","Chiedi la provenienza","Congedati"]}}
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 1,
+      "tipo_sezione": "Obiettivo",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Tre forme, un solo verbo",
+        "testo": "In inglese to be cambia in am, is e are a seconda del soggetto."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 2,
+      "tipo_sezione": "Regola",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "La forma affermativa",
+        "elementi": [
+          "I am (io sono)",
+          "You are (tu sei)",
+          "He/She is (lui/lei è)",
+          "We/They are (noi/loro siamo/sono)"
+        ]
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 3,
+      "tipo_sezione": "Esempio",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Presentati",
+        "esempio": "I am Marco. I am Italian.",
+        "traduzione": "Sono Marco. Sono italiano."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 4,
+      "tipo_sezione": "Errore tipico",
+      "formato_web": "errore_box",
+      "contenuto": {
+        "errato": "I have 30 years.",
+        "corretto": "I am 30 years old.",
+        "perche": "In inglese l'età si esprime con to be, non con to have."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 5,
+      "tipo_sezione": "Contrazioni",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Come si parla davvero",
+        "testo": "Nel parlato si usano spesso le forme contratte: I'm, you're, he's, she's, we're, they're."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 6,
+      "tipo_sezione": "Negativa",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Aggiungi not",
+        "esempio": "I am not tired.",
+        "traduzione": "Non sono stanco."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 7,
+      "tipo_sezione": "Domanda",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Inverti verbo e soggetto",
+        "esempio": "Are you Italian?",
+        "traduzione": "Sei italiano?"
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 8,
+      "tipo_sezione": "Risposta breve",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Yes, I am",
+        "testo": "Nelle risposte brevi ripeti il soggetto e la forma corretta di to be."
+      }
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "ordine": 9,
+      "tipo_sezione": "Riepilogo",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "Ricorda",
+        "elementi": [
+          "I am",
+          "He/She is",
+          "You/We/They are",
+          "Per l'età usa to be"
+        ]
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 1,
+      "tipo_sezione": "Obiettivo",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Inizia una conversazione",
+        "testo": "Scegli il saluto in base al momento e al grado di formalità."
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 2,
+      "tipo_sezione": "Parole chiave",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "I saluti essenziali",
+        "elementi": [
+          "Hello — Ciao/Salve",
+          "Hi — Ciao (informale)",
+          "Good morning — Buongiorno",
+          "Good evening — Buonasera"
+        ]
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 3,
+      "tipo_sezione": "Esempio",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Un primo scambio",
+        "esempio": "Hello, I'm Anna. Nice to meet you.",
+        "traduzione": "Ciao, sono Anna. Piacere di conoscerti."
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 4,
+      "tipo_sezione": "Errore tipico",
+      "formato_web": "errore_box",
+      "contenuto": {
+        "errato": "Good evening! (quando vai via)",
+        "corretto": "Good night! (quando vai via la sera)",
+        "perche": "Good evening apre un incontro; good night si usa per congedarsi o andare a dormire."
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 5,
+      "tipo_sezione": "Presentarsi",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "Frasi utili",
+        "elementi": [
+          "My name is… — Mi chiamo…",
+          "I'm from… — Vengo da…",
+          "Nice to meet you — Piacere"
+        ]
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 6,
+      "tipo_sezione": "Congedarsi",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Chiudi con naturalezza",
+        "esempio": "See you soon. Have a nice day!",
+        "traduzione": "A presto. Buona giornata!"
+      }
+    },
+    {
+      "lezione_id": "DEMO-VOC-001",
+      "ordine": 7,
+      "tipo_sezione": "Riepilogo",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Scegli la formula giusta",
+        "testo": "Usa hello in modo neutro, hi in modo informale e good morning/evening nei contesti più formali."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 1,
+      "tipo_sezione": "Scenario",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Incontri una persona nuova",
+        "testo": "Immagina di essere a un corso internazionale e di parlare con un nuovo compagno."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 2,
+      "tipo_sezione": "Apertura",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Saluta e dì il tuo nome",
+        "esempio": "Hi, I'm Luca. What's your name?",
+        "traduzione": "Ciao, sono Luca. Come ti chiami?"
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 3,
+      "tipo_sezione": "Risposta",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Rispondi e ricambia",
+        "esempio": "I'm Sarah. Nice to meet you, Luca.",
+        "traduzione": "Sono Sarah. Piacere di conoscerti, Luca."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 4,
+      "tipo_sezione": "Errore tipico",
+      "formato_web": "errore_box",
+      "contenuto": {
+        "errato": "How do you call?",
+        "corretto": "What's your name?",
+        "perche": "La domanda italiana “come ti chiami?” non si traduce parola per parola."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 5,
+      "tipo_sezione": "Provenienza",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Chiedi da dove viene",
+        "esempio": "Where are you from? I'm from Italy.",
+        "traduzione": "Di dove sei? Vengo dall'Italia."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 6,
+      "tipo_sezione": "Dialogo",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "Il dialogo completo",
+        "elementi": [
+          "A: Hello, I'm Paolo.",
+          "B: Hi Paolo, I'm Emma.",
+          "A: Nice to meet you. Where are you from?",
+          "B: I'm from London."
+        ]
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 7,
+      "tipo_sezione": "Strategia",
+      "formato_web": "testo",
+      "contenuto": {
+        "titolo": "Frasi brevi funzionano",
+        "testo": "Non cercare frasi complesse: saluto, nome e provenienza bastano per il primo scambio."
+      }
+    },
+    {
+      "lezione_id": "DEMO-COM-001",
+      "ordine": 8,
+      "tipo_sezione": "Riepilogo",
+      "formato_web": "lista",
+      "contenuto": {
+        "titolo": "La sequenza",
+        "elementi": [
+          "Saluta",
+          "Presentati",
+          "Chiedi il nome",
+          "Chiedi la provenienza",
+          "Congedati"
+        ]
+      }
+    }
   ],
   "quiz": [
-    {"lezione_id":"DEMO-GRA-001","modalita":"guidato","titolo":"Prova con un aiuto","quesiti":[{"ordine":1,"tipo":"scelta_multipla","testo":"Completa: I ___ Italian.","opzioni":["am","is","are"],"risposta_corretta":"am","spiegazione":"Con I, il verbo to be diventa am."}]},
-    {"lezione_id":"DEMO-GRA-001","modalita":"finale","titolo":"Quiz finale: to be","quesiti":[
-      {"ordine":1,"tipo":"scelta_multipla","testo":"She ___ from Rome.","opzioni":["am","is","are"],"risposta_corretta":"is","spiegazione":"Con she si usa is."},
-      {"ordine":2,"tipo":"completamento","testo":"Completa: They ___ students.","opzioni":[],"risposta_corretta":"are","spiegazione":"Con they si usa are."},
-      {"ordine":3,"tipo":"scelta_multipla","testo":"Quale frase è corretta?","opzioni":["I have 25 years.","I am 25 years old.","I is 25."],"risposta_corretta":"I am 25 years old.","spiegazione":"L'età inglese richiede to be."},
-      {"ordine":4,"tipo":"completamento","testo":"Completa la domanda: ___ you Italian?","opzioni":[],"risposta_corretta":"Are","spiegazione":"Nella domanda, are precede you."},
-      {"ordine":5,"tipo":"scelta_multipla","testo":"Forma negativa di “He is tired”:","opzioni":["He not is tired.","He is not tired.","He are not tired."],"risposta_corretta":"He is not tired.","spiegazione":"Not segue la forma di to be."},
-      {"ordine":6,"tipo":"completamento","testo":"Completa: We ___ ready.","opzioni":[],"risposta_corretta":"are","spiegazione":"Con we si usa are."},
-      {"ordine":7,"tipo":"scelta_multipla","testo":"Risposta breve a “Are you ready?”","opzioni":["Yes, I am.","Yes, I is.","Yes, am."],"risposta_corretta":"Yes, I am.","spiegazione":"La risposta breve mantiene soggetto e verbo."},
-      {"ordine":8,"tipo":"completamento","testo":"Completa: My name ___ Giulia.","opzioni":[],"risposta_corretta":"is","spiegazione":"My name è terza persona singolare: is."}
-    ]}
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "modalita": "guidato",
+      "titolo": "Prova con un aiuto",
+      "quesiti": [
+        {
+          "ordine": 1,
+          "tipo": "scelta_multipla",
+          "testo": "Completa: I ___ Italian.",
+          "opzioni": [
+            "am",
+            "is",
+            "are"
+          ],
+          "risposta_corretta": "am",
+          "spiegazione": "Con I, il verbo to be diventa am."
+        }
+      ]
+    },
+    {
+      "lezione_id": "DEMO-GRA-001",
+      "modalita": "finale",
+      "titolo": "Quiz finale: to be",
+      "quesiti": [
+        {
+          "ordine": 1,
+          "tipo": "scelta_multipla",
+          "testo": "She ___ from Rome.",
+          "opzioni": [
+            "am",
+            "is",
+            "are"
+          ],
+          "risposta_corretta": "is",
+          "spiegazione": "Con she si usa is."
+        },
+        {
+          "ordine": 2,
+          "tipo": "completamento",
+          "testo": "Completa: They ___ students.",
+          "opzioni": [],
+          "risposta_corretta": "are",
+          "spiegazione": "Con they si usa are."
+        },
+        {
+          "ordine": 3,
+          "tipo": "scelta_multipla",
+          "testo": "Quale frase è corretta?",
+          "opzioni": [
+            "I have 25 years.",
+            "I am 25 years old.",
+            "I is 25."
+          ],
+          "risposta_corretta": "I am 25 years old.",
+          "spiegazione": "L'età inglese richiede to be."
+        },
+        {
+          "ordine": 4,
+          "tipo": "completamento",
+          "testo": "Completa la domanda: ___ you Italian?",
+          "opzioni": [],
+          "risposta_corretta": "Are",
+          "spiegazione": "Nella domanda, are precede you."
+        },
+        {
+          "ordine": 5,
+          "tipo": "scelta_multipla",
+          "testo": "Forma negativa di “He is tired”:",
+          "opzioni": [
+            "He not is tired.",
+            "He is not tired.",
+            "He are not tired."
+          ],
+          "risposta_corretta": "He is not tired.",
+          "spiegazione": "Not segue la forma di to be."
+        },
+        {
+          "ordine": 6,
+          "tipo": "completamento",
+          "testo": "Completa: We ___ ready.",
+          "opzioni": [],
+          "risposta_corretta": "are",
+          "spiegazione": "Con we si usa are."
+        },
+        {
+          "ordine": 7,
+          "tipo": "scelta_multipla",
+          "testo": "Risposta breve a “Are you ready?”",
+          "opzioni": [
+            "Yes, I am.",
+            "Yes, I is.",
+            "Yes, am."
+          ],
+          "risposta_corretta": "Yes, I am.",
+          "spiegazione": "La risposta breve mantiene soggetto e verbo."
+        },
+        {
+          "ordine": 8,
+          "tipo": "completamento",
+          "testo": "Completa: My name ___ Giulia.",
+          "opzioni": [],
+          "risposta_corretta": "is",
+          "spiegazione": "My name è terza persona singolare: is."
+        }
+      ]
+    }
   ]
 }

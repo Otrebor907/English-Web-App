@@ -96,13 +96,13 @@ Con l'app avviabile, è arrivato il primo collaudo manuale nel browser, che ha f
 
 Con l'app stabile, è arrivato il primo vero **cambio di modello dati** dopo l'MVP iniziale:
 
-- Aggiunto `Lezione.priorita` (P0 Essenziale, P1 Consigliata, P2 Secondaria, P3 post-MVP) — usato per **ordinare il lavoro editoriale**, mai la navigazione utente (quella resta guidata solo da `ordine_mvp`).
+- Aggiunto `Lezione.priorita` (P0 Essenziale, P1 Consigliata, P2 Secondaria, P3 post-MVP) — usato per **ordinare il lavoro editoriale**, mai la navigazione utente. *Rimosso in Fase 6: vedi sotto.*
 - Vincoli applicativi e di database più stretti: solo le aree GRA/VOC/COM, `ordine_percorso` tra 1 e 98.
 - Migrazione dati per pulire vecchi residui non più previsti (contenuti "PRN" legacy).
 - Importatore esteso per rifiutare esplicitamente qualunque campo sorgente il cui nome contenga `audio` — un controllo automatico che rende impossibile reintrodurre per sbaglio un requisito escluso in Fase 0.
 - Suite portata a 26 test.
 
-**Perché distinguere `priorita` da `ordine_mvp`**: sono due concetti diversi che è facile confondere — uno dice "quanto è importante scrivere questo contenuto per primi" (lavoro editoriale), l'altro dice "in che ordine lo studente lo vede" (esperienza utente). Tenerli separati nel modello evita che una decisione editoriale interna trapeli nell'esperienza finale.
+**Perché distinguere `priorita` da `ordine_mvp`**: erano due concetti diversi — uno diceva "quanto è importante scrivere questo contenuto per primi" (lavoro editoriale), l'altro "in che ordine lo studente lo vede" (esperienza utente). In pratica `priorita` si è rivelato una copia 1:1 di `importanza_mvp` (P0=Essenziale, P1=Consigliata, P2=Secondaria, P3=nessuna): entrambi sono stati rimossi in Fase 6, lasciando `ordine_mvp` come unico ordinatore.
 
 ---
 
@@ -200,3 +200,19 @@ Se vuoi portare avanti l'app da solo, questi sono i punti d'ingresso più natura
 6. **Produzione**: quando sarai pronto a mettere online l'app, riprendi la lista "cosa manca" sopra (password policy, secret key, rate limiting) prima di esporla pubblicamente — sono gli unici punti esplicitamente rimandati per scelta, non dimenticati.
 
 Per il dettaglio di ogni singolo file e per un glossario dei termini tecnici (API, ORM, migrazione, token, CORS, DAG...), il riferimento resta [`Funzionamento.md`](Funzionamento.md).
+
+---
+
+## Fase 6 — Refactoring dello schema (migration `learning.0006`)
+
+Allineamento dei nomi al ruolo effettivo delle tabelle e riduzione delle ridondanze emerse dall'analisi dei dati.
+
+**Tabelle di mapping.** `learning_area`, `learning_tipologia`, `learning_livello` e `learning_difficolta` non sono tassonomie ma mapping codice→etichetta, e ora si chiamano `mapping_area_lezione`, `mapping_tipologia`, `mapping_livello`, `mapping_difficolta_lezione`. I nomi delle classi Python non cambiano: la rinomina passa da `Meta.db_table`, così il codice applicativo resta invariato.
+
+**Ridondanze rimosse.** `learning_lezione.priorita` e la tabella `learning_importanza` erano la stessa informazione scritta due volte (l'importer derivava letteralmente l'una dall'altra). Entrambe eliminate. L'ordinamento editoriale ora usa `ordine_mvp`.
+
+**Strutture rinominate.** `learning_sezionelezione` → `struttura_lezione`, `learning_quiz` → `struttura_quiz`: i nomi dicono cosa contengono.
+
+**Quesiti separati.** `learning_quesito` è diventata `struttura_quiz_guidato` e `struttura_quiz_finale`. Le colonne sono identiche e restano allineate tramite la classe base astratta `QuesitoBase`. **Conseguenza sull'API**: gli `id` non sono più univoci fra le due tabelle, quindi la rotta di verifica è passata da `/api/lezioni/<id>/quesiti/<qid>/verifica/` a `/api/lezioni/<id>/quiz/<modalita>/quesiti/<qid>/verifica/`. Il payload della lezione non cambia: `QuizSerializer` continua a esporre i quesiti sotto la chiave `quesiti`.
+
+**Perché `Prerequisito` è rimasta.** Era previsto di sostituirla con un prerequisito derivato dall'ID (`GRA-A1-018` → `GRA-A1-017`). La regola è stata verificata su tutti i 119 archi e riproduce il dato in 64 casi su 96: non copre le 22 lezioni con prerequisiti multipli, i 18 archi fra aree diverse, né le 15 lezioni con suffisso `-001`; in un caso inverte la dipendenza. Eliminarla avrebbe perso 55 archi e reso inutilizzabile la validazione del DAG in `services.py`. La logica esiste comunque come `Lezione.prerequisito_derivato`, un campo calcolato che non tocca lo schema.

@@ -10,7 +10,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from learning.importer import import_content, load_source
-from learning.models import Lezione, Progresso, Quesito, Quiz, User
+from learning.models import Lezione, Progresso, QuesitoFinale, StrutturaQuiz, User
 from learning.services import record_final_score
 
 
@@ -84,7 +84,7 @@ class PathIncludesInPreparationLessonsTests(APITestCase):
             livello=Livello.objects.get(code="A1"), difficolta=Difficolta.objects.get(code="Bassa"),
             ordine_percorso=4, obiettivo_didattico="Da definire.", competenze=[], durata_min=10,
             errori_tipici=[], stato=StatoLezione.objects.get(code="DA_SVILUPPARE"),
-            priorita="P0", ordine_mvp=4, fase_roadmap="Fase 1 — MVP",
+            ordine_mvp=4, fase_roadmap="Fase 1 — MVP",
         )
         cls.user = User.objects.create_user(email="path@example.com", password="password123")
 
@@ -127,14 +127,14 @@ class CheckAnswerBlocksUnpublishedTests(APITestCase):
         cls.user = User.objects.create_user(email="check@example.com", password="password123")
         # Trasformo la lezione demo in BOZZA per verificare che la view la rifiuti.
         cls.lesson = Lezione.objects.get(id="DEMO-GRA-001")
-        cls.question = Quesito.objects.filter(quiz__lezione=cls.lesson, quiz__modalita="finale").first()
+        cls.question = QuesitoFinale.objects.filter(quiz__lezione=cls.lesson).first()
 
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.user).key}")
 
     def test_check_answer_ok_for_published_lesson(self):
         response = self.client.post(
-            f"/api/lezioni/DEMO-GRA-001/quesiti/{self.question.id}/verifica/",
+            f"/api/lezioni/DEMO-GRA-001/quiz/finale/quesiti/{self.question.id}/verifica/",
             {"risposta": self.question.risposta_corretta}, format="json",
         )
         self.assertEqual(response.status_code, 200)
@@ -144,7 +144,7 @@ class CheckAnswerBlocksUnpublishedTests(APITestCase):
         self.lesson.stato_id = "BOZZA"
         self.lesson.save(update_fields=["stato"])
         response = self.client.post(
-            f"/api/lezioni/DEMO-GRA-001/quesiti/{self.question.id}/verifica/",
+            f"/api/lezioni/DEMO-GRA-001/quiz/finale/quesiti/{self.question.id}/verifica/",
             {"risposta": self.question.risposta_corretta}, format="json",
         )
         self.assertEqual(response.status_code, 404,
@@ -161,7 +161,7 @@ class GuidedExerciseIsNotScoredTests(TestCase):
         cls.lesson = Lezione.objects.get(id="DEMO-GRA-001")
 
     def test_guided_quiz_exists_and_is_marked_guidato(self):
-        guided = Quiz.objects.get(lezione=self.lesson, modalita="guidato")
+        guided = StrutturaQuiz.objects.get(lezione=self.lesson, modalita="guidato")
         self.assertEqual(guided.modalita, "guidato")
 
     def test_only_final_quiz_updates_progress(self):

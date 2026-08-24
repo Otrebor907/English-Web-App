@@ -1,0 +1,51 @@
+Refactoring schema: tabelle di mapping, strutture lezione/quiz, quesiti separati
+
+Allinea i nomi delle tabelle al loro ruolo effettivo e rimuove le ridondanze
+emerse dall'analisi dei dati su Neon. Migration: learning.0006.
+
+Tabelle di mapping (rinomina via Meta.db_table, classi Python invariate):
+- learning_area          -> mapping_area_lezione
+- learning_tipologia     -> mapping_tipologia
+- learning_livello       -> mapping_livello
+- learning_difficolta    -> mapping_difficolta_lezione
+
+Ridondanze rimosse:
+- eliminata la colonna learning_lezione.priorita
+- eliminata la tabella learning_importanza e la FK importanza_mvp
+  (l'importer derivava letteralmente l'una dall'altra: stessa informazione
+  scritta due volte). L'ordinamento editoriale usa ora ordine_mvp.
+
+Strutture rinominate:
+- learning_sezionelezione -> struttura_lezione (SezioneLezione -> StrutturaLezione)
+- learning_quiz           -> struttura_quiz    (Quiz -> StrutturaQuiz)
+
+Quesiti separati per modalita':
+- learning_quesito -> struttura_quiz_guidato + struttura_quiz_finale
+  Colonne identiche, tenute allineate dalla base astratta QuesitoBase.
+
+BREAKING CHANGE (API): dopo la separazione gli id dei quesiti non sono piu'
+univoci fra le due tabelle, quindi la rotta di verifica dichiara la modalita':
+  prima: /api/lezioni/<id>/quesiti/<qid>/verifica/
+  dopo:  /api/lezioni/<id>/quiz/<modalita>/quesiti/<qid>/verifica/
+Il payload della lezione non cambia: QuizSerializer espone ancora i quesiti
+sotto la chiave "quesiti".
+
+Prerequisito derivato, senza eliminare Prerequisito:
+la regola "ultime cifre dell'ID meno 1" e' stata verificata sui 119 archi
+esistenti e riproduce il dato in 64 casi su 96. Non copre 22 lezioni con
+prerequisiti multipli, 18 archi fra aree diverse (COM-A1-001 richiede
+GRA-A1-003) e 15 lezioni con suffisso -001; in un caso inverte la dipendenza.
+Eliminare la tabella avrebbe perso 55 archi su 119 e reso inutilizzabile la
+validazione del DAG in services.py. La logica e' quindi esposta come property
+calcolata Lezione.prerequisito_derivato, senza impatti sullo schema.
+
+Excel e documentazione allineati allo stesso modello:
+- rimosse le colonne "Importanza MVP" (Liste) e "Importanza" (Percorso MVP)
+- aggiunti i fogli Struttura_Lezione, Struttura_Quiz, struttura_quiz_guidato,
+  struttura_quiz_finale e il foglio di raccordo "Modello Dati"
+- backend/scripts/aggiorna_workbook.py rende l'operazione ripetibile
+- Doc/schema_dati.pdf rigenerato sul nuovo schema
+
+Verifiche: manage.py check pulito, makemigrations --check senza differenze,
+migration applicata end-to-end su DB vuoto, suite 67/69 (le 2 failure in
+test_password_policy sono preesistenti a questo commit).

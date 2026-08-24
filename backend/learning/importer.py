@@ -5,7 +5,10 @@ from collections import defaultdict
 from pathlib import Path
 from django.db import transaction
 from openpyxl import load_workbook
-from .models import Area, Difficolta, Importanza, Lezione, Livello, Prerequisito, Quesito, Quiz, SezioneLezione, StatoLezione, Tipologia
+from .models import (
+    Area, Difficolta, Lezione, Livello, Prerequisito, QuesitoFinale, QuesitoGuidato,
+    StatoLezione, StrutturaLezione, StrutturaQuiz, Tipologia,
+)
 from .services import GraphValidationError, collect_lesson_graph_errors, validate_lesson_graph
 
 
@@ -15,21 +18,14 @@ LOOKUP_MODELS = {
     "livello": Livello,
     "difficolta": Difficolta,
     "stato": StatoLezione,
-    "importanza": Importanza,
 }
 SUPPORTED_AREAS = {"GRA", "VOC", "COM"}
 AREA_SECTION_COUNTS = {"GRA": 9, "VOC": 7, "COM": 8}
-VALID_PRIORITIES = {"P0", "P1", "P2", "P3"}
-PRIORITY_BY_IMPORTANCE = {
-    "Essenziale": "P0",
-    "Consigliata": "P1",
-    "Secondaria": "P2",
-}
 CATALOG_LESSON_COUNT = 98
 MVP_LESSON_COUNT = 29
 REQUIRED_LESSON_FIELDS = {
     "id", "area", "tipologia", "nome", "livello", "difficolta", "ordine_percorso",
-    "obiettivo_didattico", "competenze", "durata_min", "errori_tipici", "stato", "priorita",
+    "obiettivo_didattico", "competenze", "durata_min", "errori_tipici", "stato",
     "fase_roadmap",
 }
 REQUIRED_COMPLETE_SOURCE_KEYS = {"liste", "lezioni", "prerequisiti", "sezioni", "quiz"}
@@ -69,10 +65,6 @@ def _split_list(value):
     if value in (None, "", "—") or str(value).strip().casefold() in {"nessuno", "nessuna"}:
         return []
     return [item.strip() for item in str(value).split(",") if item.strip()]
-
-
-def _priority(importanza):
-    return PRIORITY_BY_IMPORTANCE.get(str(importanza), "P3")
 
 
 def _with_expected_counts(data, fixture=False):
@@ -126,7 +118,7 @@ def _load_programma_workbook(workbook):
     list_columns = {
         "Area Didattica": "area", "Tipologia Lezione": "tipologia",
         "Livello Linguistico": "livello", "Difficoltà": "difficolta",
-        "Stato della Lezione": "stato", "Importanza MVP": "importanza",
+        "Stato della Lezione": "stato",
     }
     lists = defaultdict(list)
     seen = defaultdict(set)
@@ -136,7 +128,7 @@ def _load_programma_workbook(workbook):
             if not value:
                 continue
             code = area_codes.get(str(value), str(value)) if target_name == "area" else (
-                str(value) if target_name in {"livello", "difficolta", "importanza"} else _code(value)
+                str(value) if target_name in {"livello", "difficolta"} else _code(value)
             )
             if code not in seen[target_name]:
                 lists[target_name].append({"code": code, "nome": str(value)})
@@ -149,7 +141,6 @@ def _load_programma_workbook(workbook):
             continue
         mvp[str(lesson_id)] = {
             "ordine_mvp": int(row["Ordine MVP"]),
-            "importanza": str(row["Importanza"]),
             "prerequisiti": _split_list(row.get("Dipendenze (prerequisiti)")),
         }
 
@@ -161,7 +152,6 @@ def _load_programma_workbook(workbook):
                 item["ordine_mvp"] += 1
         mvp["GRA-A1-008"] = {
             "ordine_mvp": insertion_order,
-            "importanza": "Consigliata",
             "prerequisiti": None,
         }
         normalized_mvp = True
@@ -195,9 +185,7 @@ def _load_programma_workbook(workbook):
             "durata_min": int(row["Durata Stimata (min)"]),
             "errori_tipici": [str(row["Errori Tipici degli Italiani"])],
             "stato": _code(row["Stato della Lezione"]),
-            "priorita": _priority(mvp_row["importanza"] if mvp_row else None),
             "ordine_mvp": mvp_row["ordine_mvp"] if mvp_row else None,
-            "importanza_mvp": mvp_row["importanza"] if mvp_row else None,
             "fase_roadmap": "Fase 1 — MVP" if mvp_row else "TODO_FONTE",
         })
 
@@ -306,7 +294,7 @@ def collect_source_structure_errors(data):
         )
     lookup_fields = {
         "area": "area", "tipologia": "tipologia", "livello": "livello",
-        "difficolta": "difficolta", "stato": "stato", "importanza": "importanza_mvp",
+        "difficolta": "difficolta", "stato": "stato",
     }
     orders = []
     mvp_orders = []
@@ -320,26 +308,12 @@ def collect_source_structure_errors(data):
                 errors.append(f"{lesson.get('id')}: valore {field} inesistente: {value}")
         if lesson.get("area") not in AREA_SECTION_COUNTS:
             errors.append(f"{lesson.get('id')}: area non supportata")
-        if lesson.get("priorita") not in VALID_PRIORITIES:
-            errors.append(f"{lesson.get('id')}: priorita non valida: {lesson.get('priorita')}")
         if isinstance(lesson.get("ordine_percorso"), int):
             orders.append(lesson["ordine_percorso"])
             if not 1 <= lesson["ordine_percorso"] <= CATALOG_LESSON_COUNT:
                 errors.append(f"{lesson.get('id')}: ordine_percorso fuori intervallo 1..98")
         if lesson.get("ordine_mvp") is not None:
             mvp_orders.append(lesson["ordine_mvp"])
-            if lesson.get("priorita") == "P3":
-                errors.append(f"{lesson.get('id')}: una lezione MVP non può avere priorita P3")
-            if lesson.get("importanza_mvp") in (None, ""):
-                errors.append(f"{lesson.get('id')}: importanza_mvp obbligatoria per una lezione MVP")
-            expected_priority = PRIORITY_BY_IMPORTANCE.get(str(lesson.get("importanza_mvp")))
-            if expected_priority and lesson.get("priorita") != expected_priority:
-                errors.append(
-                    f"{lesson.get('id')}: priorita {lesson.get('priorita')} incoerente con "
-                    f"importanza_mvp {lesson.get('importanza_mvp')} (attesa {expected_priority})"
-                )
-        elif lesson.get("priorita") != "P3":
-            errors.append(f"{lesson.get('id')}: una lezione post-MVP deve avere priorita P3")
 
     if sorted(orders) != list(range(1, len(lessons) + 1)):
         errors.append(f"ordine_percorso deve essere una sequenza unica 1..{len(lessons)}")
@@ -369,12 +343,12 @@ def collect_source_structure_errors(data):
         if quiz["lezione_id"] not in lesson_ids:
             errors.append(f"Quiz riferito a lezione inesistente: {quiz['lezione_id']}")
         questions = quiz.get("quesiti", [])
-        if quiz["modalita"] == Quiz.FINALE and not 8 <= len(questions) <= 10:
+        if quiz["modalita"] == StrutturaQuiz.FINALE and not 8 <= len(questions) <= 10:
             errors.append(f"{quiz['lezione_id']}: il quiz finale deve avere 8-10 quesiti")
         for question in questions:
-            if question["tipo"] not in {Quesito.SCELTA_MULTIPLA, Quesito.COMPLETAMENTO}:
+            if question["tipo"] not in {QuesitoFinale.SCELTA_MULTIPLA, QuesitoFinale.COMPLETAMENTO}:
                 errors.append(f"Tipo quesito non valido: {question['tipo']}")
-            if question["tipo"] == Quesito.SCELTA_MULTIPLA and question["risposta_corretta"] not in question.get("opzioni", []):
+            if question["tipo"] == QuesitoFinale.SCELTA_MULTIPLA and question["risposta_corretta"] not in question.get("opzioni", []):
                 errors.append("La risposta corretta deve essere presente nelle opzioni")
     return errors
 
@@ -416,10 +390,6 @@ def source_report(data):
             "lezioni": len(lessons), "lezioni_mvp": len(mvp_ids), "lezioni_mvp_pubblicate": published_count,
             "prerequisiti": len(prerequisites), "sezioni": len(data.get("sezioni", [])),
             "sezioni_todo": todo_sections, "quiz": len(data.get("quiz", [])),
-            "priorita": dict(sorted(
-                (priority, sum(row.get("priorita") == priority for row in lessons))
-                for priority in VALID_PRIORITIES
-            )),
         },
         "radici_mvp": roots,
         "errori": errors,
@@ -443,27 +413,28 @@ def import_content(path):
         source_ids.append(row["id"])
         defaults = {key: row.get(key, "") for key in (
             "nome", "descrizione", "categoria", "ordine_percorso", "obiettivo_didattico", "competenze",
-            "durata_min", "errori_tipici", "priorita", "ordine_mvp", "fase_roadmap",
+            "durata_min", "errori_tipici", "ordine_mvp", "fase_roadmap",
         )}
         defaults.update({
             "area_id": row["area"], "tipologia_id": row["tipologia"], "livello_id": row["livello"],
             "difficolta_id": row["difficolta"], "stato_id": row["stato"],
-            "importanza_mvp_id": row.get("importanza_mvp"),
         })
         Lezione.objects.update_or_create(id=row["id"], defaults=defaults)
 
     Prerequisito.objects.all().delete()
     Lezione.objects.exclude(id__in=source_ids).delete()
     Prerequisito.objects.bulk_create([Prerequisito(lezione_id=e["lezione_id"], richiede_lezione_id=e["richiede_lezione_id"]) for e in data.get("prerequisiti", [])])
-    SezioneLezione.objects.all().delete()
-    SezioneLezione.objects.bulk_create([SezioneLezione(
+    StrutturaLezione.objects.all().delete()
+    StrutturaLezione.objects.bulk_create([StrutturaLezione(
         lezione_id=row["lezione_id"], ordine=row["ordine"], tipo_sezione=row["tipo_sezione"],
         contenuto=row["contenuto"], formato_web=row.get("formato_web", "testo"),
     ) for row in data.get("sezioni", [])])
-    Quiz.objects.all().delete()
+    StrutturaQuiz.objects.all().delete()
     for row in data.get("quiz", []):
-        quiz = Quiz.objects.create(lezione_id=row["lezione_id"], modalita=row["modalita"], titolo=row["titolo"])
-        Quesito.objects.bulk_create([Quesito(quiz=quiz, **question) for question in row.get("quesiti", [])])
+        quiz = StrutturaQuiz.objects.create(lezione_id=row["lezione_id"], modalita=row["modalita"], titolo=row["titolo"])
+        # I quesiti finiscono nella tabella della propria modalita'.
+        model = QuesitoGuidato if row["modalita"] == StrutturaQuiz.GUIDATO else QuesitoFinale
+        model.objects.bulk_create([model(quiz=quiz, **question) for question in row.get("quesiti", [])])
     for key, model in LOOKUP_MODELS.items():
         source_codes = [str(item["code"]) for item in data["liste"][key]]
         model.objects.exclude(code__in=source_codes).delete()
