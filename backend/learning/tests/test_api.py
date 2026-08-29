@@ -13,14 +13,11 @@ class ApiTests(APITestCase):
     def setUp(self):
         self.client.credentials(HTTP_AUTHORIZATION=f"Token {Token.objects.create(user=self.user).key}")
 
-    def test_lesson_is_available_and_lists_recommended_prerequisite(self):
+    def test_path_is_ordered_by_ordine_mvp_and_every_lesson_is_open(self):
         response = self.client.get("/api/percorso/")
-        print(response.data)
         self.assertEqual([item["ordine_mvp"] for item in response.data], [1, 2, 3])
-        self.assertEqual(response.data[0]["ordine_mvp"], 1)
         vocabulary = next(item for item in response.data if item["id"] == "DEMO-VOC-001")
         self.assertEqual(vocabulary["stato"], "disponibile")
-        self.assertEqual(vocabulary["prerequisiti_mancanti"][0]["id"], "DEMO-GRA-001")
 
     def test_final_quiz_is_scored_on_server(self):
         questions = QuesitoFinale.objects.filter(quiz__lezione_id="DEMO-GRA-001")
@@ -83,9 +80,8 @@ class FullUserJourneyTests(APITestCase):
         # lezioni finte caricate da setUpTestData.
         grammar = next(item for item in initial_path.data if item["id"] == "DEMO-GRA-001")
         vocabulary = next(item for item in initial_path.data if item["id"] == "DEMO-VOC-001")
-        # Il cuore della scelta di prodotto: NESSUNA lezione è bloccata. Anche
-        # VOC-001, che ha GRA-001 come prerequisito, resta "disponibile" —
-        # i prerequisiti sono un consiglio, non un cancello.
+        # Il cuore della scelta di prodotto: NESSUNA lezione è bloccata.
+        # ordine_mvp dice in che ordine escono, non cosa si può aprire.
         self.assertEqual(grammar["stato"], "disponibile")
         self.assertEqual(vocabulary["stato"], "disponibile")
 
@@ -112,8 +108,7 @@ class FullUserJourneyTests(APITestCase):
         # rileggono da zero e verificano che il 100 sia rimasto nel database.
         after_completion = client.get("/api/percorso/")
         vocabulary = next(item for item in after_completion.data if item["id"] == "DEMO-VOC-001")
-        # Ricontrollata DOPO il completamento: conferma che il prerequisito
-        # soddisfatto non abbia cambiato nulla, perché era già accessibile.
+        # Ricontrollata DOPO il completamento: era già accessibile e resta tale.
         self.assertEqual(vocabulary["stato"], "disponibile")
         progress = client.get("/api/progressi/")
         grammar_progress = next(item for item in progress.data if item["lezione_id"] == "DEMO-GRA-001")

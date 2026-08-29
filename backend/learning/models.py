@@ -1,6 +1,5 @@
-from django.contrib.auth.models import AbstractUser, BaseUserManager
+from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.core.validators import MaxValueValidator, MinValueValidator
-import re
 
 from django.db import models
 
@@ -17,30 +16,33 @@ class CodeLabel(models.Model):
         return self.nome
 
 
-# Tabelle di mapping: associano un codice stabile a un'etichetta leggibile.
+# Tabelle dimensione (dim_*): associano un codice stabile a un'etichetta leggibile.
 # db_table esplicita perche' il nome non segue piu' la convenzione <app>_<model>.
+# Minuscolo di proposito: Postgres abbassa gli identificatori non virgolettati,
+# quindi "SELECT * FROM dim_livello" funziona senza virgolette.
 class Area(CodeLabel):
     class Meta(CodeLabel.Meta):
-        db_table = "mapping_area_lezione"
+        db_table = "dim_area_lezione"
 
 
 class Tipologia(CodeLabel):
     class Meta(CodeLabel.Meta):
-        db_table = "mapping_tipologia"
+        db_table = "dim_tipologia"
 
 
 class Livello(CodeLabel):
     class Meta(CodeLabel.Meta):
-        db_table = "mapping_livello"
+        db_table = "dim_livello"
 
 
 class Difficolta(CodeLabel):
     class Meta(CodeLabel.Meta):
-        db_table = "mapping_difficolta_lezione"
+        db_table = "dim_difficolta_lezione"
 
 
 class StatoLezione(CodeLabel):
-    pass
+    class Meta(CodeLabel.Meta):
+        db_table = "dim_stato_lezione"
 
 
 # Django, di default, crea utenti con create_user(username, password). Qui invece
@@ -65,38 +67,47 @@ class UserManager(BaseUserManager):
         return self.create_user(email, password, **extra_fields)
 
 
-# Utente custom di questo progetto: eredita da AbstractUser (che include già
-# password, is_staff, is_superuser, ecc.) ma sostituisce il login-by-username
-# di Django con login-by-email, coerente col form di AuthPage (solo email + password).
-class User(AbstractUser):
-    username = None
+# Utente custom di questo progetto: eredita da AbstractBaseUser (password +
+# last_login + hashing) e NON da AbstractUser. AbstractUser porterebbe con se'
+# PermissionsMixin, cioe' i permessi granulari di Django: due tabelle ponte
+# (learning_user_groups, learning_user_user_permissions) che questo progetto non
+# usa, perche' l'unica distinzione che serve e' "utente normale" vs "admin".
+# Quella distinzione la fanno i due booleani qui sotto.
+class User(AbstractBaseUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
+    # is_active: usato da authenticate() per bloccare gli account disattivati.
+    is_active = models.BooleanField(default=True)
+    # is_staff: apre l'accesso a /admin (e a IsAdminUser lato API).
+    is_staff = models.BooleanField(default=False)
+    # is_superuser: dentro /admin puo' fare tutto (vedi has_perm()).
+    is_superuser = models.BooleanField(default=False)
     creato_il = models.DateTimeField(auto_now_add=True)
     # Dice a Django (e quindi ad authenticate() usato in LoginSerializer.validate)
     # di usare "email" come identificativo di accesso al posto di "username".
     USERNAME_FIELD = "email"
+    EMAIL_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = UserManager()
 
+    class Meta:
+        db_table = "user_profile"
 
-# Deriva l'ID della lezione immediatamente precedente nella stessa serie:
-# prende le ultime cifre dell'ID, le decrementa e ricompone il codice con lo
-# stesso padding. Restituisce None quando la serie e' al primo elemento.
-# ATTENZIONE: e' un suggerimento, non il grafo dei prerequisiti (vedi Prerequisito).
-ID_SERIE = re.compile(r"^(?P<prefisso>.*?)(?P<numero>\d+)$")
+    def get_full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
 
+    def get_short_name(self):
+        return self.first_name
 
-def id_lezione_precedente(lesson_id):
-    match = ID_SERIE.match(str(lesson_id or ""))
-    if not match:
-        return None
-    numero = int(match.group("numero"))
-    if numero <= 1:
-        return None
-    larghezza = len(match.group("numero"))
-    return f"{match.group('prefisso')}{numero - 1:0{larghezza}d}"
+    # Senza PermissionsMixin questi due metodi vanno definiti a mano: l'admin di
+    # Django li chiama per decidere cosa mostrare. Niente permessi per-oggetto o
+    # per-gruppo: o sei superuser e puoi tutto, o non entri.
+    def has_perm(self, perm, obj=None):
+        return self.is_active and self.is_superuser
+
+    def has_module_perms(self, app_label):
+        return self.is_active and self.is_superuser
 
 
 class Lezione(models.Model):
@@ -118,8 +129,6 @@ class Lezione(models.Model):
     errori_tipici = models.JSONField(default=list)
     stato = models.ForeignKey(StatoLezione, on_delete=models.PROTECT)
     ordine_mvp = models.PositiveIntegerField(null=True, blank=True, unique=True)
-    fase_roadmap = models.CharField(max_length=80)
-    prerequisiti = models.ManyToManyField("self", through="Prerequisito", symmetrical=False, related_name="sblocca")
 
     class Meta:
         ordering = ["ordine_mvp", "ordine_percorso"]
@@ -134,25 +143,8 @@ class Lezione(models.Model):
             ),
         ]
 
-    @property
-    def prerequisito_derivato(self):
-        """ID della lezione precedente nella serie, derivato dal codice.
-        Suggerimento di navigazione: i prerequisiti reali sono in `prerequisiti`."""
-        return id_lezione_precedente(self.id)
-
     def __str__(self):
         return f"{self.id} — {self.nome}"
-
-
-class Prerequisito(models.Model):
-    lezione = models.ForeignKey(Lezione, on_delete=models.CASCADE, related_name="vincoli")
-    richiede_lezione = models.ForeignKey(Lezione, on_delete=models.PROTECT, related_name="richiesta_da")
-
-    class Meta:
-        constraints = [
-            models.UniqueConstraint(fields=["lezione", "richiede_lezione"], name="prerequisito_unico"),
-            models.CheckConstraint(condition=~models.Q(lezione=models.F("richiede_lezione")), name="no_auto_prerequisito"),
-        ]
 
 
 class StrutturaLezione(models.Model):
@@ -242,8 +234,8 @@ class Progresso(models.Model):
     stato = models.CharField(max_length=12, choices=STATI, default=DISPONIBILE)
     punteggio = models.PositiveSmallIntegerField(default=0, validators=[MinValueValidator(0), MaxValueValidator(100)])
     completata_il = models.DateTimeField(null=True, blank=True)
-    minuti_effettivi = models.PositiveIntegerField(default=0)
     assegnata = models.BooleanField(default=False)
 
     class Meta:
+        db_table = "user_progress"
         constraints = [models.UniqueConstraint(fields=["utente", "lezione"], name="progresso_unico")]

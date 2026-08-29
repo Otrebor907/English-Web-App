@@ -84,7 +84,7 @@ class PathIncludesInPreparationLessonsTests(APITestCase):
             livello=Livello.objects.get(code="A1"), difficolta=Difficolta.objects.get(code="Bassa"),
             ordine_percorso=4, obiettivo_didattico="Da definire.", competenze=[], durata_min=10,
             errori_tipici=[], stato=StatoLezione.objects.get(code="DA_SVILUPPARE"),
-            ordine_mvp=4, fase_roadmap="Fase 1 — MVP",
+            ordine_mvp=4,
         )
         cls.user = User.objects.create_user(email="path@example.com", password="password123")
 
@@ -97,8 +97,6 @@ class PathIncludesInPreparationLessonsTests(APITestCase):
         pilot = next(item for item in response.data if item["id"] == "GRA-A1-999-PILOT")
         self.assertTrue(pilot["in_preparazione"])
         self.assertEqual(pilot["stato"], "in_preparazione")
-        # Non deve elencare prerequisiti mancanti su una lezione in preparazione.
-        self.assertEqual(pilot["prerequisiti_mancanti"], [])
 
     def test_lesson_detail_returns_placeholder_for_in_preparation(self):
         response = self.client.get("/api/lezioni/GRA-A1-999-PILOT/")

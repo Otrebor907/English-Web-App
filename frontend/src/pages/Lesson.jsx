@@ -56,7 +56,6 @@ export default function Lesson() {
       <div className="hero-meta" aria-label="Dettagli lezione">
         <span>{lesson.durata_min} min</span>
         {lesson.difficolta && <span>Difficoltà {lesson.difficolta}</span>}
-        {lesson.prerequisito_derivato && <span>Segue {lesson.prerequisito_derivato}</span>}
       </div>
       {user && (
         <div className="assign-control">

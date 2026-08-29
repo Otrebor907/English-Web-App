@@ -164,7 +164,6 @@ class LessonDetailSerializer(serializers.ModelSerializer):
     tipologia = serializers.CharField(source="tipologia.nome")
     livello = serializers.CharField(source="livello.code")
     difficolta = serializers.CharField(source="difficolta.code")
-    prerequisito_derivato = serializers.CharField(read_only=True, allow_null=True)
     sezioni = SectionSerializer(many=True, read_only=True)
     quiz = QuizSerializer(many=True, read_only=True)
 
@@ -173,7 +172,7 @@ class LessonDetailSerializer(serializers.ModelSerializer):
         fields = [
             "id", "area", "tipologia", "nome", "descrizione", "categoria", "livello", "difficolta",
             "ordine_percorso", "ordine_mvp", "obiettivo_didattico", "competenze", "durata_min",
-            "errori_tipici", "fase_roadmap", "prerequisito_derivato", "sezioni", "quiz",
+            "errori_tipici", "sezioni", "quiz",
         ]
 
 
@@ -183,4 +182,4 @@ class ProgressSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Progresso
-        fields = ["lezione_id", "lezione_nome", "stato", "punteggio", "completata_il", "minuti_effettivi", "assegnata"]
+        fields = ["lezione_id", "lezione_nome", "stato", "punteggio", "completata_il", "assegnata"]

@@ -106,8 +106,7 @@
         "Usare have al posto di be per l'età"
       ],
       "stato": "PUBBLICATA",
-      "ordine_mvp": 1,
-      "fase_roadmap": "MVP"
+      "ordine_mvp": 1
     },
     {
       "id": "DEMO-VOC-001",
@@ -128,8 +127,7 @@
         "Tradurre letteralmente buongiorno in ogni contesto"
       ],
       "stato": "PUBBLICATA",
-      "ordine_mvp": 2,
-      "fase_roadmap": "MVP"
+      "ordine_mvp": 2
     },
     {
       "id": "DEMO-COM-001",
@@ -150,18 +148,7 @@
         "Rispondere con frasi italiane tradotte parola per parola"
       ],
       "stato": "PUBBLICATA",
-      "ordine_mvp": 3,
-      "fase_roadmap": "MVP"
-    }
-  ],
-  "prerequisiti": [
-    {
-      "lezione_id": "DEMO-VOC-001",
-      "richiede_lezione_id": "DEMO-GRA-001"
-    },
-    {
-      "lezione_id": "DEMO-COM-001",
-      "richiede_lezione_id": "DEMO-VOC-001"
+      "ordine_mvp": 3
     }
   ],
   "sezioni": [

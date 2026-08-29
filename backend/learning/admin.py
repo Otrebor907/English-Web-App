@@ -1,15 +1,9 @@
 from django.contrib import admin
+from django.contrib.auth.models import Group
 from .models import (
-    Area, Difficolta, Lezione, Livello, Prerequisito, Progresso,
+    Area, Difficolta, Lezione, Livello, Progresso,
     QuesitoFinale, QuesitoGuidato, StrutturaQuiz, StrutturaLezione, StatoLezione, Tipologia, User,
 )
-
-
-class PrerequisitoInline(admin.TabularInline):
-    model = Prerequisito
-    fk_name = "lezione"
-    extra = 0
-    autocomplete_fields = ["richiede_lezione"]
 
 
 class SezioneInline(admin.TabularInline):
@@ -29,7 +23,7 @@ class LezioneAdmin(admin.ModelAdmin):
     list_filter = ["area", "livello", "stato", "tipologia"]
     search_fields = ["id", "nome", "obiettivo_didattico"]
     ordering = ["ordine_mvp", "ordine_percorso"]
-    inlines = [PrerequisitoInline, SezioneInline, QuizInline]
+    inlines = [SezioneInline, QuizInline]
 
 
 class QuesitoAdminBase(admin.ModelAdmin):
@@ -63,5 +57,11 @@ class UserAdmin(admin.ModelAdmin):
     readonly_fields = ["password", "last_login", "creato_il"]
 
 
-for model in (Area, Tipologia, Livello, Difficolta, StatoLezione, StrutturaQuiz, StrutturaLezione, Prerequisito):
+for model in (Area, Tipologia, Livello, Difficolta, StatoLezione, StrutturaQuiz, StrutturaLezione):
     admin.site.register(model)
+
+
+# django.contrib.auth registra da solo la sua pagina "Gruppi". Qui non serve:
+# User non ha piu' il campo groups, quindi un gruppo creato da li' non avrebbe
+# alcun effetto. La nascondiamo per non lasciare un comando che non fa nulla.
+admin.site.unregister(Group)

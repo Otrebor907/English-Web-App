@@ -6,6 +6,9 @@ import { Link } from 'react-router-dom'
 
 export const Loader = () => <div className="loader" role="status" aria-live="polite">Caricamento…</div>
 
+// Esporta questa variabile per poterla usare in altri componenti
+// che cosa devi esporta il messaggio
+// => singnigica prendi il messaggio di prima e mettilo dentro la classe <div className="error-state">
 export const ErrorState = ({ message }) => <div className="error-state">
   <h2>Qualcosa non ha funzionato</h2>
   <p>{message}</p>

@@ -6,7 +6,5 @@
   "livello": "A1",
   "difficolta": "Bassa",
   "ordine_percorso": 1,
-  "ordine_mvp": 1,
-  "fase_roadmap": "Fase 1",
-  "prerequisiti": []
+  "ordine_mvp": 1
 }

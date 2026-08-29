@@ -16,13 +16,13 @@ class Command(BaseCommand):
                 validate_source(data)
                 report = source_report(data)
                 self.stdout.write(self.style.SUCCESS(
-                    f"Dry-run valido: {report['conteggi']['lezioni']} lezioni, "
-                    f"{report['conteggi']['prerequisiti']} prerequisiti; nessuna modifica salvata"
+                    f"Dry-run valido: {report['conteggi']['lezioni']} lezioni; "
+                    f"nessuna modifica salvata"
                 ))
                 return
             result = import_content(options["file"])
         except Exception as exc:
             raise CommandError(f"IMPORT FALLITO — nessuna modifica salvata: {exc}") from exc
         self.stdout.write(self.style.SUCCESS(
-            f"Import completato: {result['lezioni']} lezioni, {result['prerequisiti']} prerequisiti"
+            f"Import completato: {result['lezioni']} lezioni"
         ))

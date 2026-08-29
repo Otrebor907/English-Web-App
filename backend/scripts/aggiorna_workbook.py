@@ -68,35 +68,35 @@ SHEETS = {
     "struttura_quiz_finale": (
         "STRUTTURA_QUIZ_FINALE — quesiti del quiz finale",
         "Tabella Neon: struttura_quiz_finale, dalla separazione di learning_quesito. Corretti in blocco: "
-        "producono il punteggio in learning_progresso (soglia 70). API: /api/lezioni/<id>/quiz/finale/quesiti/<qid>/verifica/",
+        "producono il punteggio in user_progress (soglia 70). API: /api/lezioni/<id>/quiz/finale/quesiti/<qid>/verifica/",
         [(a, b, c, d.format(modalita="finale")) for a, b, c, d in QUESITO],
     ),
 }
 
 MODELLO_DATI = [
-    ("mapping_area_lezione", "learning_area", "Liste (col. Area Didattica)", "Rinominata: tabella di mapping codice→etichetta."),
-    ("mapping_tipologia", "learning_tipologia", "Liste (col. Tipologia Lezione)", "Rinominata."),
-    ("mapping_livello", "learning_livello", "Liste (col. Livello Linguistico)", "Rinominata."),
-    ("mapping_difficolta_lezione", "learning_difficolta", "Liste (col. Difficoltà)", "Rinominata, senza accento: un identificatore accentato andrebbe virgolettato in ogni query Postgres."),
-    ("learning_statolezione", "—", "Liste (col. Stato della Lezione)", "Invariata: fuori dal perimetro del refactor."),
-    ("learning_lezione", "—", "Programma Lezioni", "Rimosse le colonne priorita e importanza_mvp_id."),
-    ("learning_prerequisito", "—", "Programma Lezioni (Prerequisiti) e Percorso MVP (Dipendenze)", "MANTENUTA: vedi nota in fondo."),
+    ("dim_area_lezione", "mapping_area_lezione", "Liste (col. Area Didattica)", "Tabella dimensione codice→etichetta. Prefisso dim_ minuscolo: Postgres abbassa gli identificatori non virgolettati."),
+    ("dim_tipologia", "mapping_tipologia", "Liste (col. Tipologia Lezione)", "Rinominata."),
+    ("dim_livello", "mapping_livello", "Liste (col. Livello Linguistico)", "Rinominata."),
+    ("dim_difficolta_lezione", "mapping_difficolta_lezione", "Liste (col. Difficoltà)", "Rinominata, senza accento: un identificatore accentato andrebbe virgolettato in ogni query Postgres."),
+    ("dim_stato_lezione", "learning_statolezione", "Liste (col. Stato della Lezione)", "Rinominata: tiene i valori DA_SVILUPPARE / DA_SVILUPPARE_MVP / PUBBLICATA."),
+    ("learning_lezione", "—", "Programma Lezioni", "Rimosse le colonne priorita, importanza_mvp_id e fase_roadmap."),
+    ("learning_prerequisito", "—", "— (eliminata)", "ELIMINATA: vedi nota in fondo."),
     ("struttura_lezione", "learning_sezionelezione", "Struttura_Lezione", "Rinominata: è la struttura della lezione."),
     ("struttura_quiz", "learning_quiz", "Struttura_Quiz", "Rinominata."),
     ("struttura_quiz_guidato", "learning_quesito (parte guidata)", "struttura_quiz_guidato", "Nuova, da separazione di learning_quesito."),
     ("struttura_quiz_finale", "learning_quesito (parte finale)", "struttura_quiz_finale", "Nuova, da separazione di learning_quesito."),
-    ("learning_progresso", "—", "—", "Invariata. Popolata dagli utenti, non dal workbook."),
-    ("learning_user", "—", "—", "Invariata."),
+    ("user_progress", "learning_progresso", "—", "Rinominata. Popolata dagli utenti, non dal workbook. Rimossa la colonna minuti_effettivi: valeva 0 su ogni riga."),
+    ("user_profile", "learning_user", "—", "Rinominata. Rimossi i permessi granulari di Django: via le tabelle ponte learning_user_groups e learning_user_user_permissions e la colonna date_joined."),
     ("learning_importanza", "learning_importanza", "— (eliminata)", "ELIMINATA con la colonna learning_lezione.priorita."),
 ]
 
 NOTA_PREREQUISITI = (
-    "La regola «ultime cifre dell'ID meno 1» e' stata verificata su tutti i 119 archi esistenti: riproduce il dato "
-    "esattamente in 64 casi su 96. Non copre 22 lezioni con piu' di un prerequisito, 18 archi fra aree diverse "
-    "(COM-A1-001 richiede GRA-A1-003) e 15 lezioni con suffisso -001 (genererebbe -000, inesistente); in un caso "
-    "inverte la dipendenza (COM-A1-002 richiede COM-A1-004). Eliminare la tabella avrebbe perso 55 archi su 119 e reso "
-    "inutilizzabile la validazione del DAG in services.py. La logica e' comunque disponibile come campo derivato "
-    "Lezione.prerequisito_derivato, esposto in API e mostrato nel frontend come «Segue X», senza impatti sullo schema."
+    "I 119 archi prerequisito non bloccavano nulla: le lezioni sono sempre state tutte accessibili, e il grafo "
+    "serviva solo a mostrare un consiglio («Segue X», «prerequisiti mancanti»). A fronte di questo, costava una "
+    "tabella ponte, una M2M Lezione<->Lezione, la validazione del DAG in services.py e una colonna nel workbook. "
+    "Rimosso tutto: l'ordine con cui affrontare le lezioni resta espresso da ordine_mvp (1..29 sul percorso MVP) e "
+    "da ordine_percorso (1..98 sul programma completo). Se un domani servira' un vero blocco per prerequisiti, si "
+    "reintroduce allora, su un prodotto gia' avviato."
 )
 
 
@@ -141,9 +141,9 @@ def aggiorna(percorso):
             modifiche.append("Liste: rimossa colonna «Importanza MVP»")
         ws["A2"] = (
             "Queste colonne alimentano le convalide dati degli altri fogli. Ogni colonna corrisponde a una tabella "
-            "su Neon: Area Didattica → mapping_area_lezione, Tipologia Lezione → mapping_tipologia, "
-            "Livello Linguistico → mapping_livello, Difficoltà → mapping_difficolta_lezione, "
-            "Stato della Lezione → learning_statolezione."
+            "su Neon: Area Didattica → dim_area_lezione, Tipologia Lezione → dim_tipologia, "
+            "Livello Linguistico → dim_livello, Difficoltà → dim_difficolta_lezione, "
+            "Stato della Lezione → dim_stato_lezione."
         )
 
     if "Percorso MVP" in wb.sheetnames:
@@ -167,14 +167,14 @@ def aggiorna(percorso):
     ws = _scrivi_foglio(
         wb, "Modello Dati",
         "MODELLO DATI — corrispondenza fogli / tabelle Neon",
-        "Stato dopo la migration learning.0006. Se una struttura cambia su Neon va aggiornata anche qui.",
+        "Stato dopo la migration learning.0009. Se una struttura cambia su Neon va aggiornata anche qui.",
         MODELLO_DATI, posizione=1,
     )
     for i, intestazione in enumerate(["Tabella Neon (attuale)", "Nome precedente", "Foglio di riferimento", "Note"], start=1):
         cella = ws.cell(row=4, column=i, value=intestazione)
         cella.font, cella.fill, cella.alignment = HEAD, FILL, WRAP
     riga = len(MODELLO_DATI) + 6
-    ws.cell(row=riga, column=1, value="Perché learning_prerequisito non è stata eliminata").font = Font(name="Arial", size=11, bold=True)
+    ws.cell(row=riga, column=1, value="Perché learning_prerequisito è stata eliminata").font = Font(name="Arial", size=11, bold=True)
     cella = ws.cell(row=riga + 1, column=1, value=NOTA_PREREQUISITI)
     cella.font, cella.alignment = BODY, WRAP
     ws.merge_cells(start_row=riga + 1, start_column=1, end_row=riga + 5, end_column=4)

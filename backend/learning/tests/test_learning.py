@@ -22,7 +22,7 @@ class ImportAndProgressTests(TestCase):
         self.assertSetEqual(set(Area.objects.values_list("code", flat=True)), {"GRA", "VOC", "COM"})
         self.assertEqual(Lezione.objects.get(id="DEMO-GRA-001").ordine_mvp, 1)
 
-    def test_lessons_are_never_locked_by_prerequisites(self):
+    def test_lessons_are_never_locked(self):
         grammar = Lezione.objects.get(id="DEMO-GRA-001")
         vocabulary = Lezione.objects.get(id="DEMO-VOC-001")
         self.assertEqual(lesson_state(self.user, grammar), Progresso.DISPONIBILE)

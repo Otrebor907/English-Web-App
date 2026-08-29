@@ -6,10 +6,9 @@ from pathlib import Path
 from django.db import transaction
 from openpyxl import load_workbook
 from .models import (
-    Area, Difficolta, Lezione, Livello, Prerequisito, QuesitoFinale, QuesitoGuidato,
+    Area, Difficolta, Lezione, Livello, QuesitoFinale, QuesitoGuidato,
     StatoLezione, StrutturaLezione, StrutturaQuiz, Tipologia,
 )
-from .services import GraphValidationError, collect_lesson_graph_errors, validate_lesson_graph
 
 
 LOOKUP_MODELS = {
@@ -26,9 +25,8 @@ MVP_LESSON_COUNT = 29
 REQUIRED_LESSON_FIELDS = {
     "id", "area", "tipologia", "nome", "livello", "difficolta", "ordine_percorso",
     "obiettivo_didattico", "competenze", "durata_min", "errori_tipici", "stato",
-    "fase_roadmap",
 }
-REQUIRED_COMPLETE_SOURCE_KEYS = {"liste", "lezioni", "prerequisiti", "sezioni", "quiz"}
+REQUIRED_COMPLETE_SOURCE_KEYS = {"liste", "lezioni", "sezioni", "quiz"}
 
 
 def _json_cell(value, default):
@@ -139,10 +137,7 @@ def _load_programma_workbook(workbook):
         lesson_id = row.get("ID Lezione")
         if not lesson_id or not isinstance(row.get("Ordine MVP"), (int, float)):
             continue
-        mvp[str(lesson_id)] = {
-            "ordine_mvp": int(row["Ordine MVP"]),
-            "prerequisiti": _split_list(row.get("Dipendenze (prerequisiti)")),
-        }
+        mvp[str(lesson_id)] = {"ordine_mvp": int(row["Ordine MVP"])}
 
     normalized_mvp = False
     if "GRA-A1-008" not in mvp and "GRA-A1-009" in mvp:
@@ -150,26 +145,16 @@ def _load_programma_workbook(workbook):
         for item in mvp.values():
             if item["ordine_mvp"] >= insertion_order:
                 item["ordine_mvp"] += 1
-        mvp["GRA-A1-008"] = {
-            "ordine_mvp": insertion_order,
-            "prerequisiti": None,
-        }
+        mvp["GRA-A1-008"] = {"ordine_mvp": insertion_order}
         normalized_mvp = True
 
     lessons = []
-    prerequisites = []
     for row in _sheet_rows_at(workbook["Programma Lezioni"], 4, 17):
         lesson_id = row.get("ID Lezione")
         if not lesson_id:
             continue
         lesson_id = str(lesson_id)
         mvp_row = mvp.get(lesson_id)
-        required_ids = (
-            mvp_row["prerequisiti"]
-            if mvp_row and mvp_row["prerequisiti"] is not None
-            else _split_list(row.get("Prerequisiti"))
-        )
-        prerequisites.extend({"lezione_id": lesson_id, "richiede_lezione_id": required_id} for required_id in required_ids)
         lessons.append({
             "id": lesson_id,
             "area": area_codes[str(row["Area Didattica"])],
@@ -186,7 +171,6 @@ def _load_programma_workbook(workbook):
             "errori_tipici": [str(row["Errori Tipici degli Italiani"])],
             "stato": _code(row["Stato della Lezione"]),
             "ordine_mvp": mvp_row["ordine_mvp"] if mvp_row else None,
-            "fase_roadmap": "Fase 1 — MVP" if mvp_row else "TODO_FONTE",
         })
 
     template_sheets = {"GRA": "Grammatica", "VOC": "Vocabolario", "COM": "Comunicazione"}
@@ -212,7 +196,7 @@ def _load_programma_workbook(workbook):
         for lesson in lessons for section in templates[lesson["area"]]
     ]
     return {
-        "liste": dict(lists), "lezioni": lessons, "prerequisiti": prerequisites,
+        "liste": dict(lists), "lezioni": lessons,
         "sezioni": sections, "quiz": [],
         "meta": {
             "formato": "programma_lezioni",
@@ -238,7 +222,7 @@ def load_source(path):
     native_sheets = {"Programma Lezioni", "Percorso MVP", "Grammatica", "Vocabolario", "Comunicazione", "Liste"}
     if native_sheets.issubset(workbook.sheetnames):
         return _load_programma_workbook(workbook)
-    required = {"Liste", "Lezioni", "Prerequisiti", "Sezioni", "Quiz"}
+    required = {"Liste", "Lezioni", "Sezioni", "Quiz"}
     missing = required - set(workbook.sheetnames)
     if missing:
         raise ValueError(f"Fogli Excel mancanti: {', '.join(sorted(missing))}")
@@ -266,7 +250,6 @@ def load_source(path):
     quizzes = [{"lezione_id": key[0], "modalita": key[1], "titolo": f"{key[1].title()}", "quesiti": value} for key, value in questions_by_quiz.items()]
     return _with_expected_counts({
         "liste": dict(lists), "lezioni": lessons,
-        "prerequisiti": _sheet_rows(workbook["Prerequisiti"]),
         "sezioni": sections, "quiz": quizzes,
         "meta": {"formato": "excel_normalizzato"},
     })
@@ -357,19 +340,13 @@ def validate_source(data):
     structure_errors = collect_source_structure_errors(data)
     if structure_errors:
         raise ValueError("Fonte non valida:\n- " + "\n- ".join(structure_errors))
-    validate_lesson_graph(data.get("lezioni", []), data.get("prerequisiti", []))
 
 
 def source_report(data):
     lessons = data.get("lezioni", [])
-    prerequisites = data.get("prerequisiti", [])
     mvp_ids = {row["id"] for row in lessons if row.get("ordine_mvp") is not None}
-    lessons_with_incoming = {edge["lezione_id"] for edge in prerequisites}
-    roots = sorted(mvp_ids - lessons_with_incoming)
-    errors = collect_source_structure_errors(data) + collect_lesson_graph_errors(lessons, prerequisites)
+    errors = collect_source_structure_errors(data)
     warnings = []
-    if len(roots) != 1:
-        warnings.append(f"Il Percorso MVP ha {len(roots)} nodi senza prerequisiti: {', '.join(roots) or 'nessuno'}")
     published_count = sum(row.get("stato") == "PUBBLICATA" and row.get("ordine_mvp") is not None for row in lessons)
     if not published_count:
         warnings.append("Nessuna lezione MVP ha stato PUBBLICATA")
@@ -388,10 +365,9 @@ def source_report(data):
         "formato": data.get("meta", {}).get("formato", "normalizzato"),
         "conteggi": {
             "lezioni": len(lessons), "lezioni_mvp": len(mvp_ids), "lezioni_mvp_pubblicate": published_count,
-            "prerequisiti": len(prerequisites), "sezioni": len(data.get("sezioni", [])),
+            "sezioni": len(data.get("sezioni", [])),
             "sezioni_todo": todo_sections, "quiz": len(data.get("quiz", [])),
         },
-        "radici_mvp": roots,
         "errori": errors,
         "avvisi": warnings,
     }
@@ -413,7 +389,7 @@ def import_content(path):
         source_ids.append(row["id"])
         defaults = {key: row.get(key, "") for key in (
             "nome", "descrizione", "categoria", "ordine_percorso", "obiettivo_didattico", "competenze",
-            "durata_min", "errori_tipici", "ordine_mvp", "fase_roadmap",
+            "durata_min", "errori_tipici", "ordine_mvp",
         )}
         defaults.update({
             "area_id": row["area"], "tipologia_id": row["tipologia"], "livello_id": row["livello"],
@@ -421,9 +397,7 @@ def import_content(path):
         })
         Lezione.objects.update_or_create(id=row["id"], defaults=defaults)
 
-    Prerequisito.objects.all().delete()
     Lezione.objects.exclude(id__in=source_ids).delete()
-    Prerequisito.objects.bulk_create([Prerequisito(lezione_id=e["lezione_id"], richiede_lezione_id=e["richiede_lezione_id"]) for e in data.get("prerequisiti", [])])
     StrutturaLezione.objects.all().delete()
     StrutturaLezione.objects.bulk_create([StrutturaLezione(
         lezione_id=row["lezione_id"], ordine=row["ordine"], tipo_sezione=row["tipo_sezione"],
@@ -438,4 +412,4 @@ def import_content(path):
     for key, model in LOOKUP_MODELS.items():
         source_codes = [str(item["code"]) for item in data["liste"][key]]
         model.objects.exclude(code__in=source_codes).delete()
-    return {"lezioni": len(source_ids), "prerequisiti": len(data.get("prerequisiti", []))}
+    return {"lezioni": len(source_ids)}

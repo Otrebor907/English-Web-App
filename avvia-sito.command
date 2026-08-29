@@ -5,8 +5,6 @@
 #  il sito nel browser. Non serve chiedere niente a nessuno.
 # =====================================================================
 
-# Cartella del progetto (modifica solo se sposti il progetto)
-REPO="/Users/robertocalisi/Documents/English-Web-App"
 
 echo "Avvio del sito English Web App..."
 echo "Cartella progetto: $REPO"

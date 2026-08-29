@@ -92,19 +92,18 @@ Django distingue tra "progetto" (config generale) e "app" (un modulo funzionale,
 Questa è l'unica "app" Django del progetto: contiene modelli (le tabelle del database), viste (gli endpoint API) e la logica di business (regole del percorso, punteggio, ecc.).
 
 - **`models.py`** — definisce le **tabelle del database** come classi Python (questo si chiama *ORM*: Object-Relational Mapping, cioè "scrivi classi Python, Django le traduce in tabelle SQL"). Le principali:
-  - `User`: l'utente, con email al posto dello username.
-  - `Lezione`: una lezione (grammatica/vocabolario/comunicazione), con area, livello, ordine nel percorso, ecc. Espone anche `prerequisito_derivato`, un campo calcolato (non una colonna) che ricava l'ID della lezione precedente nella stessa serie decrementando il suffisso numerico.
+  - `User` (tabella `user_profile`): l'utente, con email al posto dello username.
+  - `Lezione`: una lezione (grammatica/vocabolario/comunicazione), con area, livello e due ordinamenti: `ordine_percorso` (posizione nel programma completo, 1..98, sempre valorizzato) e `ordine_mvp` (posizione nel percorso MVP, 1..29, `NULL` per le lezioni fuori MVP).
   - `Prerequisito`: collega due lezioni dicendo "per fare X è consigliato aver fatto Y" (relazione "molti-a-molti" tramite tabella intermedia).
   - `StrutturaLezione` (tabella `struttura_lezione`): un blocco di contenuto teorico dentro una lezione (es. "Regola", "Esempio", "Errore tipico").
   - `StrutturaQuiz` (tabella `struttura_quiz`): il quiz della lezione, in modalità guidata o finale.
   - `QuesitoGuidato` e `QuesitoFinale` (tabelle `struttura_quiz_guidato` e `struttura_quiz_finale`): le singole domande, separate per modalità. Hanno colonne identiche, garantite da una classe base astratta condivisa. Attenzione: gli `id` sono univoci solo dentro la propria tabella, per questo la rotta di verifica include la modalità.
-  - `Progresso`: tiene traccia, per ogni coppia utente+lezione, dello stato (bloccata/disponibile/in corso/completata) e del punteggio migliore ottenuto.
-  - Le classi `Area`, `Tipologia`, `Livello`, `Difficolta` sono tabelle di mapping "codice → etichetta", su Neon chiamate `mapping_area_lezione`, `mapping_tipologia`, `mapping_livello`, `mapping_difficolta_lezione`. `StatoLezione` resta `learning_statolezione`. Servono a validare che i valori inseriti siano tra quelli ammessi.
+  - `Progresso` (tabella `user_progress`): tiene traccia, per ogni coppia utente+lezione, dello stato (bloccata/disponibile/in corso/completata) e del punteggio migliore ottenuto.
+  - Le classi `Area`, `Tipologia`, `Livello`, `Difficolta` e `StatoLezione` sono tabelle dimensione "codice → etichetta", su Neon chiamate `dim_area_lezione`, `dim_tipologia`, `dim_livello`, `dim_difficolta_lezione`, `dim_stato_lezione`. Servono a validare che i valori inseriti siano tra quelli ammessi. Il prefisso `dim_` è minuscolo perché Postgres abbassa gli identificatori non virgolettati: `SELECT * FROM dim_livello` funziona così com'è.
 - **`serializers.py`** — i **traduttori** tra oggetti Python/database e JSON (il formato che il frontend capisce). Ogni serializer dice "quali campi esporre e come validarli in ingresso". Es. `RegisterSerializer` valida che la password abbia almeno 8 caratteri prima di creare l'utente.
 - **`views.py`** — le **funzioni che rispondono alle richieste HTTP** (gli endpoint). Ogni funzione decorata con `@api_view([...])` è un endpoint: riceve una richiesta, fa i controlli, interroga il database tramite i modelli, e restituisce una `Response` in JSON. Esempi: `register` (crea utente + genera token), `path_lessons` (elenco delle lezioni del percorso MVP), `submit_final_quiz` (calcola il punteggio del quiz **lato server**, mai fidandosi di un punteggio calcolato dal browser).
 - **`urls.py`** — collega ogni indirizzo (es. `POST /api/auth/login/`) alla funzione corrispondente in `views.py`.
 - **`services.py`** — le **regole di business pure**, separate dalle viste per essere riutilizzabili e testabili. In particolare:
-  - `collect_lesson_graph_errors` / `validate_lesson_graph`: verificano che il grafo dei prerequisiti tra lezioni sia valido — niente cicli (A richiede B che richiede A), niente riferimenti a lezioni inesistenti, e che ogni lezione pubblicata sia raggiungibile partendo dalla prima. Questo è un controllo tipico sui **DAG** (*Directed Acyclic Graph*, grafo diretto senza cicli), una struttura dati che modella dipendenze.
   - `record_final_score`: salva il punteggio migliore, e se ≥ 70% marca la lezione come completata.
 - **`admin.py`** — configura il **Django Admin**, un pannello di amministrazione web generato automaticamente da Django per gestire i dati (utenti, lezioni, quiz...) senza scrivere query manuali. Raggiungibile su `/admin/`.
 - **`apps.py`** — file di configurazione minimo richiesto da Django per registrare l'app `learning`. Quasi mai lo tocchi.
@@ -120,7 +119,7 @@ Django permette di aggiungere comandi personalizzabili a `manage.py`. Qui ce ne 
 Ogni volta che cambi `models.py` (es. aggiungi un campo), Django genera un file di **migrazione**: un piccolo script che descrive "come trasformare lo schema del database da uno stato al successivo". Le migrazioni si applicano con `python manage.py migrate` e vanno tenute in ordine cronologico (`0001_initial.py`, `0002_...py`, ecc.). Non si modificano mai a mano: si rigenerano con `makemigrations`.
 
 ### 4.6 `backend/learning/tests/`
-Test automatici scritti con il framework di test di Django (basato su `unittest`). Coprono: autenticazione e permessi (`test_permissions.py`), profilo utente (`test_profile.py`), l'intero flusso lezione→quiz→punteggio (`test_pilot_lesson.py`), la validità del grafo prerequisiti (`test_graph.py`), l'importazione idempotente (`test_commands.py`, `test_programma_workbook.py`) e le chiamate API end-to-end (`test_api.py`, `test_learning.py`). Si lanciano con `python manage.py test`.
+Test automatici scritti con il framework di test di Django (basato su `unittest`). Coprono: autenticazione e permessi (`test_permissions.py`), profilo utente (`test_profile.py`), l'intero flusso lezione→quiz→punteggio (`test_pilot_lesson.py`), l'importazione idempotente (`test_commands.py`, `test_programma_workbook.py`) e le chiamate API end-to-end (`test_api.py`, `test_learning.py`). Si lanciano con `python manage.py test`.
 
 ### 4.7 `backend/fixtures/contenuti_minimi.json`
 Un piccolo catalogo finto (3 lezioni con ID `DEMO-*`) usato solo per collaudare velocemente il motore in locale — non è contenuto editoriale reale.

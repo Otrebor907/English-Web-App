@@ -66,7 +66,7 @@ class ProgrammaWorkbookImportTests(TestCase):
         first = import_content(PROGRAMMA)
         second = import_content(PROGRAMMA)
 
-        self.assertEqual(first, {"lezioni": 98, "prerequisiti": 119})
+        self.assertEqual(first, {"lezioni": 98})
         self.assertEqual(second, first)
         self.assertEqual(Lezione.objects.count(), 98)
         self.assertEqual(Lezione.objects.filter(ordine_mvp__isnull=False).count(), 29)

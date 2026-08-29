@@ -11,7 +11,7 @@ from .serializers import (
 )
 from .services import (
     assign_lesson, assigned_lesson_ids, completed_lesson_ids, lesson_state, mark_in_progress,
-    missing_prerequisites, record_final_score, sync_progress, unassign_lesson,
+    record_final_score, sync_progress, unassign_lesson,
 )
 
 
@@ -119,13 +119,11 @@ def _lesson_summary_payload(lesson, user, completed):
     }
     if lesson.stato_id != "PUBBLICATA":
         return {**base, "stato": STATO_IN_PREPARAZIONE, "in_preparazione": True,
-                "punteggio": 0, "prerequisiti_mancanti": []}
-    missing = missing_prerequisites(user, lesson, completed)
+                "punteggio": 0}
     progress = Progresso.objects.filter(utente=user, lezione=lesson).first()
     return {**base, "stato": lesson_state(user, lesson),
             "in_preparazione": False,
-            "punteggio": progress.punteggio if progress else 0,
-            "prerequisiti_mancanti": [{"id": item.id, "nome": item.nome} for item in missing]}
+            "punteggio": progress.punteggio if progress else 0}
 
 
 @api_view(["GET"])
@@ -133,7 +131,7 @@ def path_lessons(request):
     sync_progress(request.user)
     lessons = Lezione.objects.filter(
         ordine_mvp__isnull=False, stato_id__in=STATI_LEZIONE_ESPOSTI,
-    ).select_related("area", "livello", "difficolta").prefetch_related("prerequisiti").order_by("ordine_mvp")
+    ).select_related("area", "livello", "difficolta").order_by("ordine_mvp")
     completed = completed_lesson_ids(request.user)
     return Response([_lesson_summary_payload(lesson, request.user, completed) for lesson in lessons])
 
@@ -179,17 +177,14 @@ def lesson_detail(request, lesson_id):
             "obiettivo_didattico": lesson.obiettivo_didattico,
             "competenze": lesson.competenze, "durata_min": lesson.durata_min,
             "errori_tipici": lesson.errori_tipici,
-            "fase_roadmap": lesson.fase_roadmap,
             "sezioni": [], "quiz": [],
             "in_preparazione": True, "stato_utente": STATO_IN_PREPARAZIONE,
             "assegnata": False, "autenticato": bool(user),
         })
     progress = Progresso.objects.filter(utente=user, lezione=lesson).first() if user else None
-    missing = [{"id": item.id, "nome": item.nome} for item in missing_prerequisites(user, lesson)] if user else []
     return Response({
         **LessonDetailSerializer(lesson).data, "in_preparazione": False,
         "stato_utente": lesson_state(user, lesson) if user else None,
-        "prerequisiti_consigliati": missing,
         "assegnata": bool(progress and progress.assegnata),
         "ultimo_risultato": progress.punteggio if progress and progress.punteggio else None,
         "autenticato": bool(user),
@@ -245,7 +240,7 @@ def submit_final_quiz(request, lesson_id):
     correct = sum(_answer_matches(question, answers.get(str(question.id), answers.get(question.id))) for question in questions)
     score = round(correct / len(questions) * 100) if questions else 0
     try:
-        progress = record_final_score(request.user, lesson, score, int(request.data.get("minuti", 0)))
+        progress = record_final_score(request.user, lesson, score)
     except (ValueError, TypeError) as exc:
         return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
     details = [{

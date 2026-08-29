@@ -21,7 +21,7 @@ class Command(BaseCommand):
             counts = report["conteggi"]
             self.stdout.write(
                 f"Fonte: {counts['lezioni']} lezioni, {counts['lezioni_mvp']} MVP, "
-                f"{counts['prerequisiti']} prerequisiti, {counts['sezioni']} sezioni"
+                f"{counts['sezioni']} sezioni"
             )
             for warning in report["avvisi"]:
                 self.stdout.write(self.style.WARNING(f"AVVISO — {warning}"))

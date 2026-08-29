@@ -216,3 +216,25 @@ Allineamento dei nomi al ruolo effettivo delle tabelle e riduzione delle ridonda
 **Quesiti separati.** `learning_quesito` è diventata `struttura_quiz_guidato` e `struttura_quiz_finale`. Le colonne sono identiche e restano allineate tramite la classe base astratta `QuesitoBase`. **Conseguenza sull'API**: gli `id` non sono più univoci fra le due tabelle, quindi la rotta di verifica è passata da `/api/lezioni/<id>/quesiti/<qid>/verifica/` a `/api/lezioni/<id>/quiz/<modalita>/quesiti/<qid>/verifica/`. Il payload della lezione non cambia: `QuizSerializer` continua a esporre i quesiti sotto la chiave `quesiti`.
 
 **Perché `Prerequisito` è rimasta.** Era previsto di sostituirla con un prerequisito derivato dall'ID (`GRA-A1-018` → `GRA-A1-017`). La regola è stata verificata su tutti i 119 archi e riproduce il dato in 64 casi su 96: non copre le 22 lezioni con prerequisiti multipli, i 18 archi fra aree diverse, né le 15 lezioni con suffisso `-001`; in un caso inverte la dipendenza. Eliminarla avrebbe perso 55 archi e reso inutilizzabile la validazione del DAG in `services.py`. La logica esiste comunque come `Lezione.prerequisito_derivato`, un campo calcolato che non tocca lo schema.
+
+---
+
+## Fase 7 — Semplificazione dello schema (migration `learning.0007`, `0008`, `0009`)
+
+Fase di sfoltimento, non di costruzione: togliere dallo schema tutto ciò che non serve al prodotto che si sta avviando. La complessità si reintroduce quando c'è un motivo, su un prodotto già vivo.
+
+**Permessi granulari di Django rimossi** (`0007`). `User` ereditava da `AbstractUser`, che porta con sé `PermissionsMixin` e quindi due tabelle ponte, `learning_user_groups` e `learning_user_user_permissions`. Non erano mai state usate: l'unica distinzione che il progetto fa è `is_staff` / `is_superuser`. `User` ora eredita da `AbstractBaseUser` e dichiara a mano quei booleani più `has_perm()` / `has_module_perms()`, che l'admin di Django richiede. Rimossa anche `date_joined`, doppione di `creato_il`. La pagina "Gruppi" è stata tolta dall'admin: senza il campo `groups` non avrebbe alcun effetto.
+
+**Tabelle dimensione** (`0008`). Le cinque tabelle codice→etichetta prendono il prefisso `dim_`: `dim_area_lezione`, `dim_tipologia`, `dim_livello`, `dim_difficolta_lezione`, `dim_stato_lezione` (quest'ultima era ancora `learning_statolezione`). Minuscolo di proposito — Postgres abbassa gli identificatori non virgolettati, quindi `SELECT * FROM dim_livello` funziona senza virgolette, mentre `DIM_livello` avrebbe imposto le virgolette in ogni query scritta a mano.
+
+**`fase_roadmap` eliminata** (`0008`). Aveva due soli valori sui dati reali, `"Fase 1 — MVP"` e `"TODO_FONTE"`, e coincideva esattamente con l'avere o meno `ordine_mvp`. La stessa informazione era già in `stato_id` (`DA_SVILUPPARE`, `DA_SVILUPPARE_MVP`, `PUBBLICATA`). Scritta in tre posti, ora in uno.
+
+**Il grafo dei prerequisiti eliminato** (`0008`). Via la tabella `learning_prerequisito`, la M2M `Lezione ↔ Lezione` che le stava sopra, il campo calcolato `prerequisito_derivato`, la validazione del DAG in `services.py` (`collect_lesson_graph_errors`, `validate_lesson_graph`), `missing_prerequisites`, le chiavi `prerequisiti_mancanti` e `prerequisiti_consigliati` nell'API, il «Segue X» nel frontend e i test dedicati (`test_graph.py`).
+
+Perché: dalla Fase 4 i prerequisiti non bloccavano più nulla — erano diventati un consiglio, e nessuna lezione era mai inaccessibile. Restava quindi un grafo con validazione DAG, una tabella ponte e una colonna nel workbook per produrre un suggerimento di navigazione. L'ordine con cui affrontare le lezioni resta espresso da `ordine_mvp` (1..29 sul percorso MVP) e `ordine_percorso` (1..98 sul programma completo), che è ciò che il sito usa davvero per ordinare l'indice.
+
+Questa fase corregge esplicitamente la decisione presa in Fase 6 (*"Perché `Prerequisito` è rimasta"*): quell'analisi era corretta sui dati — la regola derivata dall'ID copriva solo 64 archi su 96 — ma rispondeva alla domanda sbagliata. Non era «come conserviamo i 119 archi», era «a cosa servono». La risposta, per l'MVP, è: a niente.
+
+**Tabelle dell'utente rinominate** (`0009`). `learning_user` → `user_profile`, `learning_progresso` → `user_progress`. Insieme al prefisso `dim_` delle tabelle dimensione, lo schema su Neon si legge ora per famiglie: `dim_*` i codici, `struttura_*` i contenuti editoriali, `user_*` ciò che appartiene a chi usa il sito.
+
+**`minuti_effettivi` eliminata** (`0009`). La colonna veniva incrementata dal parametro `minuti` di `submit_final_quiz`, che il frontend non ha mai inviato: valeva `0` su tutte le righe. Rimossa insieme al parametro `minutes` di `record_final_score()`.
