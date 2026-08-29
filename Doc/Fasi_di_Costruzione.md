@@ -238,3 +238,16 @@ Questa fase corregge esplicitamente la decisione presa in Fase 6 (*"Perché `Pre
 **Tabelle dell'utente rinominate** (`0009`). `learning_user` → `user_profile`, `learning_progresso` → `user_progress`. Insieme al prefisso `dim_` delle tabelle dimensione, lo schema su Neon si legge ora per famiglie: `dim_*` i codici, `struttura_*` i contenuti editoriali, `user_*` ciò che appartiene a chi usa il sito.
 
 **`minuti_effettivi` eliminata** (`0009`). La colonna veniva incrementata dal parametro `minuti` di `submit_final_quiz`, che il frontend non ha mai inviato: valeva `0` su tutte le righe. Rimossa insieme al parametro `minutes` di `record_final_score()`.
+
+**Django Admin rimosso, e con lui cinque tabelle di infrastruttura.** `auth_group`, `auth_group_permissions` e `auth_permission` erano rimaste dopo la `0007`: non appartengono al modello dati del progetto ma a `django.contrib.auth`, e finché quell'app è installata esistono. Verificato che non c'è via di mezzo — togliere `django.contrib.auth` tenendo l'admin fallisce con `RuntimeError: Model class django.contrib.auth.models.Permission ... isn't in an application in INSTALLED_APPS`, perché l'admin è costruito sopra quel sistema di permessi.
+
+Scelta: rimuovere il pannello. Il flusso reale di pubblicazione passa da `pubblica_da_markdown` e `importa_contenuti`, non dall'admin, e i dati si ispezionano dall'editor SQL di Neon. Disinstallate `django.contrib.admin`, `auth`, `contenttypes`, `sessions` e `messages`; eliminati `learning/admin.py`, la rotta `admin/` e i middleware/context processor che le servivano. Su Neon sono state eliminate `auth_group`, `auth_group_permissions`, `auth_permission`, `django_admin_log`, `django_content_type` e `django_session`, più le righe di `django_migrations` delle app disinstallate: **da 20 tabelle a 14**.
+
+Due pezzi di `django.contrib.auth` erano però in uso e sono stati riscritti in casa:
+
+- `authenticate()` → `services.authenticate_by_email()`. Replica `ModelBackend`, compresa la difesa contro il timing attack: se l'email non esiste calcola comunque un hash, altrimenti una risposta molto più rapida rivelerebbe quali email sono registrate.
+- `AnonymousUser` → `learning/auth.py`. DRF lo mette in `request.user` a ogni richiesta senza token; il default punta a `django.contrib.auth.models`, non più importabile. Aggancio via `REST_FRAMEWORK["UNAUTHENTICATED_USER"]`.
+
+**La `0001_initial` è stata modificata a mano**, contro la regola generale di non toccare le migrazioni già applicate. Il motivo: dichiarava `dependencies = [("auth", "0012_...")]` e creava i campi `groups` / `user_permissions` con `to="auth.group"`. Con `auth` fuori da `INSTALLED_APPS` quel nodo non esiste più nel grafo e **un database creato da zero non sarebbe partito** — i test compresi. Rimossa la dipendenza e i due campi, e tolte per coerenza le `RemoveField` corrispondenti dalla `0007`. Lo schema finale è identico e su un database già migrato non cambia nulla.
+
+**Conseguenza operativa da ricordare:** non esistono più i comandi `createsuperuser` e `changepassword`, che arrivavano da `django.contrib.auth`. Per creare un amministratore: `python manage.py shell -c "from learning.models import User; User.objects.create_superuser(email='...', password='...')"`.

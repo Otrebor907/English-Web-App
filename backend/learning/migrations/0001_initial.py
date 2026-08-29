@@ -12,9 +12,12 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-        ("auth", "0012_alter_user_first_name_max_length"),
-    ]
+    # La dipendenza da ("auth", "0012_...") e i campi groups / user_permissions
+    # sono stati tolti da questa migrazione quando django.contrib.auth e' stato
+    # disinstallato insieme al pannello /admin/. Senza la modifica un database
+    # creato da zero non partirebbe: "auth" non e' piu' nel grafo. Lo schema
+    # finale non cambia — quei due campi venivano comunque rimossi dalla 0007.
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
@@ -164,28 +167,6 @@ class Migration(migrations.Migration):
                 ),
                 ("email", models.EmailField(max_length=254, unique=True)),
                 ("creato_il", models.DateTimeField(auto_now_add=True)),
-                (
-                    "groups",
-                    models.ManyToManyField(
-                        blank=True,
-                        help_text="The groups this user belongs to. A user will get all permissions granted to each of their groups.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.group",
-                        verbose_name="groups",
-                    ),
-                ),
-                (
-                    "user_permissions",
-                    models.ManyToManyField(
-                        blank=True,
-                        help_text="Specific permissions for this user.",
-                        related_name="user_set",
-                        related_query_name="user",
-                        to="auth.permission",
-                        verbose_name="user permissions",
-                    ),
-                ),
             ],
             options={
                 "verbose_name": "user",

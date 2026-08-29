@@ -16,12 +16,16 @@ SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-only-change-me")
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1").split(",") if host]
 
+# Niente django.contrib.admin: il pannello /admin/ e' stato rimosso, e con lui
+# le app che esistevano solo per reggerlo (auth, contenttypes, sessions,
+# messages) e le loro tabelle (auth_group, auth_group_permissions,
+# auth_permission, django_admin_log, django_content_type, django_session).
+# I contenuti si pubblicano dai comandi importa_contenuti / pubblica_da_markdown.
+# CONSEGUENZA: non esistono piu' i comandi createsuperuser e changepassword,
+# che arrivavano da django.contrib.auth. Per creare un amministratore:
+#   python manage.py shell -c "from learning.models import User; \
+#     User.objects.create_superuser(email='...', password='...')"
 INSTALLED_APPS = [
-    "django.contrib.admin",
-    "django.contrib.auth",
-    "django.contrib.contenttypes",
-    "django.contrib.sessions",
-    "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
     "rest_framework.authtoken",
@@ -29,14 +33,14 @@ INSTALLED_APPS = [
     "learning",
 ]
 
+# L'API si autentica col token DRF (header Authorization), non con la sessione:
+# sessioni, auth e messages servivano solo all'admin. XFrameOptions resta,
+# non c'entra con l'admin: protegge dal clickjacking.
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
-    "django.contrib.sessions.middleware.SessionMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
@@ -47,8 +51,6 @@ TEMPLATES = [{
     "APP_DIRS": True,
     "OPTIONS": {"context_processors": [
         "django.template.context_processors.request",
-        "django.contrib.auth.context_processors.auth",
-        "django.contrib.messages.context_processors.messages",
     ]},
 }]
 WSGI_APPLICATION = "config.wsgi.application"
@@ -108,6 +110,10 @@ CORS_ALLOWED_ORIGINS = [
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.TokenAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
+    # Chi non presenta un token finisce qui. Il default di DRF sarebbe
+    # django.contrib.auth.models.AnonymousUser, che non e' piu' importabile
+    # da quando quell'app e' stata disinstallata: vedi learning/auth.py.
+    "UNAUTHENTICATED_USER": "learning.auth.AnonymousUser",
 }
 
 SECRET_KEY_SEGNAPOSTO = "dev-only-change-me"

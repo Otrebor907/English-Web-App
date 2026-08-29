@@ -1,8 +1,8 @@
-from django.contrib.auth import authenticate
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from rest_framework import serializers
 from .models import Lezione, Progresso, QuesitoFinale, QuesitoGuidato, StrutturaLezione, StrutturaQuiz, User
+from .services import authenticate_by_email
 
 
 def _valida_password(password, utente, campo=None):
@@ -65,15 +65,14 @@ class LoginSerializer(serializers.Serializer):
 
     def validate_email(self, value):
         return value.strip().lower()
-    # Qui avviene il vero controllo delle credenziali: authenticate() è la
-    # funzione standard di Django, configurata (AUTH_USER_MODEL = learning.User,
-    # USERNAME_FIELD = "email" in learning/models.py) per cercare l'utente per
-    # email e verificarne la password con l'hash salvato nel database.
+    # Qui avviene il vero controllo delle credenziali: authenticate_by_email()
+    # (services.py) cerca l'utente per email e ne verifica la password contro
+    # l'hash salvato nel database.
     def validate(self, attrs):
-        user = authenticate(email=attrs["email"], password=attrs["password"])
-        # authenticate() ritorna None sia se l'email non esiste sia se la
-        # password è sbagliata: il messaggio resta volutamente generico, per
-        # non rivelare a un attaccante quale dei due campi era corretto.
+        user = authenticate_by_email(attrs["email"], attrs["password"])
+        # Ritorna None sia se l'email non esiste sia se la password è
+        # sbagliata: il messaggio resta volutamente generico, per non rivelare
+        # a un attaccante quale dei due campi era corretto.
         if not user:
             raise serializers.ValidationError("Email o password non validi")
         # L'utente autenticato viene passato alla view tramite validated_data,

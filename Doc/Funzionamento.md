@@ -35,7 +35,7 @@ Non serve conoscere React o Django a fondo per seguire questa guida: ogni concet
 
 | Livello | Scelta | Perché |
 |---|---|---|
-| Backend | **Python + Django** | Python è il linguaggio che già conosci. Django è un framework "batterie incluse": gestisce da solo utenti, autenticazione, admin, database — non devi scrivere quella parte da zero. |
+| Backend | **Python + Django** | Python è il linguaggio che già conosci. Django è un framework "batterie incluse": gestisce da solo utenti, autenticazione e database — non devi scrivere quella parte da zero. (Di quelle batterie il progetto ha poi rimosso il pannello admin: vedi Fase 7 in `Fasi_di_Costruzione.md`.) |
 | API | **Django REST Framework (DRF)** | Django di base genera pagine HTML; DRF lo trasforma in un fornitore di dati puri (JSON) che il frontend può consumare. È lo standard de facto per fare API con Django. |
 | Frontend | **React + Vite** | React è la libreria più diffusa per costruire interfacce che si aggiornano da sole quando i dati cambiano (niente di dover riscrivere manualmente l'HTML). Vite è lo strumento che impacchetta e serve il codice React in sviluppo/produzione: è molto più veloce dei tool più vecchi (es. Webpack). |
 | Database (sviluppo) | **SQLite** | È un singolo file (`db.sqlite3`), zero configurazione: perfetto per lavorare in locale sul proprio computer. |
@@ -79,12 +79,12 @@ Il "telecomando" di Django. Da terminale lo usi per: avviare il server (`runserv
 Django distingue tra "progetto" (config generale) e "app" (un modulo funzionale, qui `learning`). `config/` contiene:
 
 - **`settings.py`** — il pannello di controllo di tutto il backend:
-  - `INSTALLED_APPS`: quali moduli sono attivi (Django admin, DRF, `corsheaders`, la nostra app `learning`...).
+  - `INSTALLED_APPS`: quali moduli sono attivi (DRF, `corsheaders`, la nostra app `learning`...). Volutamente corta: `django.contrib.admin`, `auth`, `contenttypes`, `sessions` e `messages` sono state disinstallate insieme al pannello `/admin/`.
   - `DATABASES`: sceglie **Postgres** se trova la variabile d'ambiente `POSTGRES_DB`, altrimenti **SQLite** — questo è il meccanismo che rende il progetto "portabile" tra locale e produzione.
   - `AUTH_USER_MODEL = "learning.User"`: dice a Django di usare il nostro utente custom (basato su email) invece di quello di default (basato su username).
   - `REST_FRAMEWORK`: impone che ogni richiesta all'API debba avere un **token** di autenticazione valido, salvo eccezioni esplicite (login, registrazione, contenuti pubblici).
   - `CORS_ALLOWED_ORIGINS`: elenco degli indirizzi (es. `localhost:5173`, dove gira il frontend) a cui è permesso chiamare l'API da un browser. Senza questo, il browser bloccherebbe le richieste per motivi di sicurezza (politica "same-origin").
-- **`urls.py`** — lo "smistatore" principale: manda tutto ciò che inizia con `/admin/` al pannello di amministrazione Django, e tutto ciò che inizia con `/api/` al file `learning/urls.py`.
+- **`urls.py`** — lo "smistatore" principale: manda tutto ciò che inizia con `/api/` al file `learning/urls.py`. Non c'è altro: il pannello `/admin/` è stato rimosso.
 - **`wsgi.py`** — il punto d'ingresso che i server di produzione (es. gunicorn, visto in `docker-compose.yml`) usano per far partire l'applicazione. Non lo tocchi mai a mano.
 
 ### 4.3 `backend/learning/` — l'app che contiene tutta la logica didattica
@@ -104,8 +104,9 @@ Questa è l'unica "app" Django del progetto: contiene modelli (le tabelle del da
 - **`views.py`** — le **funzioni che rispondono alle richieste HTTP** (gli endpoint). Ogni funzione decorata con `@api_view([...])` è un endpoint: riceve una richiesta, fa i controlli, interroga il database tramite i modelli, e restituisce una `Response` in JSON. Esempi: `register` (crea utente + genera token), `path_lessons` (elenco delle lezioni del percorso MVP), `submit_final_quiz` (calcola il punteggio del quiz **lato server**, mai fidandosi di un punteggio calcolato dal browser).
 - **`urls.py`** — collega ogni indirizzo (es. `POST /api/auth/login/`) alla funzione corrispondente in `views.py`.
 - **`services.py`** — le **regole di business pure**, separate dalle viste per essere riutilizzabili e testabili. In particolare:
+  - `authenticate_by_email`: verifica email + password contro l'hash salvato. Rimpiazza `django.contrib.auth.authenticate()`, e ne conserva la difesa contro il timing attack (calcola un hash anche quando l'email non esiste, così i tempi di risposta non rivelano quali email sono registrate).
   - `record_final_score`: salva il punteggio migliore, e se ≥ 70% marca la lezione come completata.
-- **`admin.py`** — configura il **Django Admin**, un pannello di amministrazione web generato automaticamente da Django per gestire i dati (utenti, lezioni, quiz...) senza scrivere query manuali. Raggiungibile su `/admin/`.
+- **`auth.py`** — contiene `AnonymousUser`, l'oggetto che DRF mette in `request.user` quando la richiesta non porta un token. Sostituisce quello di `django.contrib.auth`, non più disponibile.
 - **`apps.py`** — file di configurazione minimo richiesto da Django per registrare l'app `learning`. Quasi mai lo tocchi.
 - **`importer.py`** — il cuore dell'importazione contenuti: legge un file JSON o un foglio Excel (`.xlsx`), lo valida pesantemente (campi obbligatori, aree ammesse, conteggio sezioni per lezione, niente campi "audio"...) e infine scrive tutto nel database **in una singola transazione atomica** (`@transaction.atomic`): o va tutto a buon fine, o non si salva nulla — non esistono stati intermedi corrotti.
 - **`markdown_source.py`** — un parser che legge i brief editoriali scritti a mano in `lezioni_markdown/*.md` (teoria + esercizio guidato + quiz finale con soluzioni) e pubblica **una singola lezione alla volta**, senza toccare le altre. Usa espressioni regolari per riconoscere pattern come `❌ sbagliato → ✅ corretto — perché` o `**Risposta: X**`.

@@ -117,7 +117,13 @@ Creare un amministratore con:
 python manage.py createsuperuser
 ```
 
-Il Django Admin è su `/admin/`. Un utente staff autenticato nella SPA vede anche `/contenuti-da-completare`, con il riepilogo delle sezioni `TODO_FONTE` e dei quiz finali mancanti.
+Il pannello Django Admin non esiste più: i contenuti si pubblicano con `importa_contenuti` e `pubblica_da_markdown`, i dati si ispezionano su Neon. Un utente staff autenticato nella SPA vede `/contenuti-da-completare`, con il riepilogo delle sezioni `TODO_FONTE` e dei quiz finali mancanti.
+
+Per creare un amministratore (il comando `createsuperuser` arrivava da `django.contrib.auth`, ora disinstallata):
+
+```bash
+python manage.py shell -c "from learning.models import User; User.objects.create_superuser(email='tu@example.com', password='...')"
+```
 
 ## CI
 

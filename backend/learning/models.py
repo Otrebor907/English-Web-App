@@ -68,20 +68,20 @@ class UserManager(BaseUserManager):
 
 
 # Utente custom di questo progetto: eredita da AbstractBaseUser (password +
-# last_login + hashing) e NON da AbstractUser. AbstractUser porterebbe con se'
-# PermissionsMixin, cioe' i permessi granulari di Django: due tabelle ponte
-# (learning_user_groups, learning_user_user_permissions) che questo progetto non
-# usa, perche' l'unica distinzione che serve e' "utente normale" vs "admin".
-# Quella distinzione la fanno i due booleani qui sotto.
+# last_login + hashing) e NON da AbstractUser, che porterebbe con se'
+# PermissionsMixin e i permessi granulari di Django. Qui non servono: l'unica
+# distinzione e' "utente normale" vs "amministratore", e la fa is_staff.
 class User(AbstractBaseUser):
     email = models.EmailField(unique=True)
     first_name = models.CharField(max_length=100, blank=True)
     last_name = models.CharField(max_length=100, blank=True)
     # is_active: usato da authenticate() per bloccare gli account disattivati.
     is_active = models.BooleanField(default=True)
-    # is_staff: apre l'accesso a /admin (e a IsAdminUser lato API).
+    # is_staff: e' cio' che IsAdminUser controlla sulle rotte riservate (es.
+    # /api/contenuti/gaps/). Unico livello di privilegio effettivo del progetto.
     is_staff = models.BooleanField(default=False)
-    # is_superuser: dentro /admin puo' fare tutto (vedi has_perm()).
+    # is_superuser: marca l'account proprietario. Nessun codice lo interroga da
+    # quando /admin/ non esiste piu'; resta come etichetta.
     is_superuser = models.BooleanField(default=False)
     creato_il = models.DateTimeField(auto_now_add=True)
     # Dice a Django (e quindi ad authenticate() usato in LoginSerializer.validate)
@@ -99,15 +99,6 @@ class User(AbstractBaseUser):
 
     def get_short_name(self):
         return self.first_name
-
-    # Senza PermissionsMixin questi due metodi vanno definiti a mano: l'admin di
-    # Django li chiama per decidere cosa mostrare. Niente permessi per-oggetto o
-    # per-gruppo: o sei superuser e puoi tutto, o non entri.
-    def has_perm(self, perm, obj=None):
-        return self.is_active and self.is_superuser
-
-    def has_module_perms(self, app_label):
-        return self.is_active and self.is_superuser
 
 
 class Lezione(models.Model):

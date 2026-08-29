@@ -1,9 +1,28 @@
 from django.db import transaction
 from django.utils import timezone
-from .models import Lezione, Progresso
+from .models import Lezione, Progresso, User
 
 
 PASS_THRESHOLD = 70
+
+
+def authenticate_by_email(email, password):
+    """Verifica le credenziali e restituisce l'utente, oppure None.
+
+    Sostituisce django.contrib.auth.authenticate(): quell'app non e' piu'
+    installata (e' sparita con il pannello /admin/). Replica la stessa logica
+    di ModelBackend, compresa la difesa contro il timing attack: se l'email non
+    esiste si calcola comunque un hash, altrimenti una risposta molto piu'
+    rapida rivelerebbe a un attaccante quali email sono registrate.
+    """
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        User().set_password(password)
+        return None
+    if user.check_password(password) and user.is_active:
+        return user
+    return None
 
 
 def completed_lesson_ids(user):
