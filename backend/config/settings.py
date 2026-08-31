@@ -20,6 +20,8 @@ ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,1
 # le app che esistevano solo per reggerlo (auth, contenttypes, sessions,
 # messages) e le loro tabelle (auth_group, auth_group_permissions,
 # auth_permission, django_admin_log, django_content_type, django_session).
+# Fuori anche "rest_framework.authtoken": il token di sessione ha un modello
+# nostro (learning.models.Token, tabella user_authtoken_token).
 # I contenuti si pubblicano dai comandi importa_contenuti / pubblica_da_markdown.
 # CONSEGUENZA: non esistono piu' i comandi createsuperuser e changepassword,
 # che arrivavano da django.contrib.auth. Per creare un amministratore:
@@ -28,7 +30,6 @@ ALLOWED_HOSTS = [host for host in os.getenv("DJANGO_ALLOWED_HOSTS", "localhost,1
 INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "rest_framework",
-    "rest_framework.authtoken",
     "corsheaders",
     "learning",
 ]
@@ -108,7 +109,7 @@ CORS_ALLOWED_ORIGINS = [
 # register devono dichiarare esplicitamente @permission_classes([AllowAny]),
 # altrimenti nessuno potrebbe mai autenticarsi la prima volta.
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": ["rest_framework.authentication.TokenAuthentication"],
+    "DEFAULT_AUTHENTICATION_CLASSES": ["learning.auth.TokenAuthentication"],
     "DEFAULT_PERMISSION_CLASSES": ["rest_framework.permissions.IsAuthenticated"],
     # Chi non presenta un token finisce qui. Il default di DRF sarebbe
     # django.contrib.auth.models.AnonymousUser, che non e' piu' importabile

@@ -1,7 +1,7 @@
 from django.contrib.auth.base_user import AbstractBaseUser, BaseUserManager
 from django.core.validators import MaxValueValidator, MinValueValidator
-
 from django.db import models
+from rest_framework.authtoken.models import Token as TokenDRF
 
 
 class CodeLabel(models.Model):
@@ -99,6 +99,18 @@ class User(AbstractBaseUser):
 
     def get_short_name(self):
         return self.first_name
+
+
+# Il token di sessione dell'API. DRF ne fornisce uno pronto, ma nella tabella
+# authtoken_token: fuori dallo schema di nomi del progetto. La sua classe
+# diventa astratta quando "rest_framework.authtoken" non e' in INSTALLED_APPS
+# (e' un aggancio previsto da DRF), quindi qui la si eredita cambiando solo il
+# nome della tabella. Campi e comportamento restano quelli di DRF: chiave
+# generata da os.urandom, una sola riga per utente.
+# Chi lo legge a ogni richiesta e' learning.auth.TokenAuthentication.
+class Token(TokenDRF):
+    class Meta:
+        db_table = "user_authtoken_token"
 
 
 class Lezione(models.Model):

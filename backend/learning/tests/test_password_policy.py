@@ -7,10 +7,9 @@ non produrrebbe alcun effetto: questi test lo verificano.
 """
 from django.core.exceptions import ImproperlyConfigured
 from django.test import SimpleTestCase
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
-from learning.models import User
+from learning.models import Token, User
 
 
 class RegistrazionePolicyPasswordTests(APITestCase):

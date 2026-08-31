@@ -4,8 +4,24 @@ Quell'app e' stata disinstallata insieme al pannello /admin/ (vedi il commento
 in config/settings.py). Restava pero' un pezzo indispensabile: DRF, davanti a
 una richiesta senza credenziali, mette in request.user un oggetto "utente
 anonimo", e per impostazione predefinita usa quello di django.contrib.auth.
-Qui c'e' il rimpiazzo, agganciato da REST_FRAMEWORK["UNAUTHENTICATED_USER"].
+Qui c'e' il rimpiazzo, agganciato da REST_FRAMEWORK["UNAUTHENTICATED_USER"],
+insieme alla classe che legge il token di sessione dalla nostra tabella.
 """
+
+from rest_framework.authentication import TokenAuthentication as TokenAuthDRF
+
+from .models import Token
+
+
+class TokenAuthentication(TokenAuthDRF):
+    """Identica a quella di DRF, ma legge da user_authtoken_token.
+
+    DRF cerca il token nel proprio modello (tabella authtoken_token) a meno che
+    non gli si indichi il modello da usare: e' l'aggancio previsto per i token
+    personalizzati. Vedi learning.models.Token.
+    """
+
+    model = Token
 
 
 class AnonymousUser:

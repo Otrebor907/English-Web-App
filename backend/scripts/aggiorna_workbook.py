@@ -1,8 +1,49 @@
-"""Allinea un workbook del programma allo schema Neon dopo la migration 0006.
+"""Allinea un workbook del programma allo schema Neon attuale.
 
 Uso: python3 aggiorna_workbook.py <file.xlsx> [altro.xlsx ...]
 
 Idempotente: rieseguirlo su un file gia' aggiornato non cambia nulla.
+
+Fa due cose:
+1. ripulisce le colonne e i sottotitoli dei fogli letti dall'importer, quando
+   restano tracce di campi rimossi dal modello dati;
+2. elimina i fogli di documentazione che nessuna parte del codice legge.
+
+Il punto 2 e' un'inversione rispetto alla versione precedente di questo script,
+che quei fogli li *creava*. Erano una copia a mano dello schema del database,
+da riallineare a ogni migration: informazione duplicata che invecchiava in
+silenzio (il foglio «Modello Dati» dichiarava ancora i nomi mapping_* dopo che
+la migration 0008 li aveva rinominati in dim_*). La fonte di verita' dello
+schema e' backend/learning/models.py, dove i nomi delle tabelle sono espliciti
+in db_table. Il workbook resta la fonte del *programma didattico*, non dello
+schema. Fogli eliminati il 31/08/2026; il contenuto dei due fogli che non
+duplicavano il codice e' conservato in Doc/Logica_Didattica.md.
+
+--- Nota storica: corrispondenza dei nomi tabella prima e dopo il refactor ---
+  dim_area_lezione          <- mapping_area_lezione <- learning_area
+  dim_tipologia             <- mapping_tipologia    <- learning_tipologia
+  dim_livello               <- mapping_livello      <- learning_livello
+  dim_difficolta_lezione    <- mapping_difficolta_lezione <- learning_difficolta
+  dim_stato_lezione         <- learning_statolezione
+  struttura_lezione         <- learning_sezionelezione
+  struttura_quiz            <- learning_quiz
+  struttura_quiz_guidato    <- learning_quesito (parte guidata)
+  struttura_quiz_finale     <- learning_quesito (parte finale)
+  user_progress             <- learning_progresso
+  user_profile              <- learning_user
+  user_authtoken_token      <- authtoken_token
+  learning_importanza       ELIMINATA, con la colonna learning_lezione.priorita
+  learning_prerequisito     ELIMINATA (vedi sotto)
+
+--- Nota storica: perche' learning_prerequisito e' stata eliminata ---
+I 119 archi prerequisito non bloccavano nulla: le lezioni sono sempre state
+tutte accessibili, e il grafo serviva solo a mostrare un consiglio («Segue X»,
+«prerequisiti mancanti»). A fronte di questo, costava una tabella ponte, una
+M2M Lezione<->Lezione, la validazione del DAG in services.py e una colonna nel
+workbook. Rimosso tutto: l'ordine con cui affrontare le lezioni resta espresso
+da ordine_mvp (1..29 sul percorso MVP) e da ordine_percorso (1..98 sul
+programma completo). Se un domani servira' un vero blocco per prerequisiti, si
+reintroduce allora, su un prodotto gia' avviato.
 """
 import sys
 import warnings
@@ -10,117 +51,27 @@ import warnings
 warnings.filterwarnings("ignore")
 
 from openpyxl import load_workbook
-from openpyxl.styles import Alignment, Font, PatternFill
-from openpyxl.utils import get_column_letter
 
-TITLE = Font(name="Arial", size=14, bold=True)
-SUB = Font(name="Arial", size=10, italic=True, color="595959")
-HEAD = Font(name="Arial", size=10, bold=True, color="FFFFFF")
-BODY = Font(name="Arial", size=10)
-FILL = PatternFill("solid", fgColor="1F4E5F")
-WRAP = Alignment(wrap_text=True, vertical="top")
-
-COLS = ["Colonna", "Tipo Neon", "Obbligatoria", "Descrizione"]
-WIDTHS = [26, 22, 14, 68]
-
-QUESITO = [
-    ("id", "bigint (identity)", "si", "Chiave primaria tecnica. Univoca solo dentro questa tabella."),
-    ("quiz_id", "bigint FK", "si", "Riferimento a struttura_quiz.id, modalita {modalita}."),
-    ("ordine", "smallint", "si", "Posizione del quesito. UNIQUE con quiz_id."),
-    ("tipo", "varchar(20)", "si", "completamento oppure scelta_multipla."),
-    ("testo", "text", "si", "Testo del quesito mostrato all'utente."),
-    ("opzioni", "jsonb", "si", "Alternative per scelta_multipla; lista vuota per completamento."),
-    ("risposta_corretta", "varchar(300)", "si", "Soluzione. Varianti accettate separate da «|»."),
-    ("spiegazione", "text", "si", "Mostrata dopo la verifica. Mai inviata al client prima della risposta."),
-]
-
-SHEETS = {
-    "Struttura_Lezione": (
-        "STRUTTURA_LEZIONE — sezioni che compongono una lezione",
-        "Tabella Neon: struttura_lezione (ex learning_sezionelezione). Una riga per sezione, "
-        "ordinata da «ordine» (UNIQUE con lezione_id). I template per area sono nei fogli Grammatica / Vocabolario / Comunicazione.",
-        [
-            ("id", "bigint (identity)", "si", "Chiave primaria tecnica."),
-            ("lezione_id", "varchar(32) FK", "si", "Riferimento a learning_lezione.id."),
-            ("ordine", "smallint", "si", "Posizione della sezione. UNIQUE con lezione_id."),
-            ("tipo_sezione", "varchar(80)", "si", "Nome della sezione, es. «Regola e uso»."),
-            ("contenuto", "jsonb", "si", "Chiavi tipiche: titolo, testo, elementi. Con formato_web = todo contiene il segnaposto TODO_FONTE."),
-            ("formato_web", "varchar(40)", "si", "Resa nel frontend: testo, lista, errore_box, todo."),
-        ],
-    ),
-    "Struttura_Quiz": (
-        "STRUTTURA_QUIZ — parte esercitativa della lezione",
-        "Tabella Neon: struttura_quiz (ex learning_quiz). Al massimo due righe per lezione, una per modalita. "
-        "I quesiti stanno nei fogli struttura_quiz_guidato e struttura_quiz_finale.",
-        [
-            ("id", "bigint (identity)", "si", "Chiave primaria tecnica."),
-            ("lezione_id", "varchar(32) FK", "si", "Riferimento a learning_lezione.id."),
-            ("modalita", "varchar(10)", "si", "guidato oppure finale. UNIQUE con lezione_id."),
-            ("titolo", "varchar(160)", "si", "Titolo mostrato all'utente."),
-        ],
-    ),
-    "struttura_quiz_guidato": (
-        "STRUTTURA_QUIZ_GUIDATO — quesiti dell'esercizio guidato",
-        "Tabella Neon: struttura_quiz_guidato, dalla separazione di learning_quesito. Correzione immediata, "
-        "un quesito alla volta, senza punteggio. API: /api/lezioni/<id>/quiz/guidato/quesiti/<qid>/verifica/",
-        [(a, b, c, d.format(modalita="guidato")) for a, b, c, d in QUESITO],
-    ),
-    "struttura_quiz_finale": (
-        "STRUTTURA_QUIZ_FINALE — quesiti del quiz finale",
-        "Tabella Neon: struttura_quiz_finale, dalla separazione di learning_quesito. Corretti in blocco: "
-        "producono il punteggio in user_progress (soglia 70). API: /api/lezioni/<id>/quiz/finale/quesiti/<qid>/verifica/",
-        [(a, b, c, d.format(modalita="finale")) for a, b, c, d in QUESITO],
-    ),
+# I soli fogli che l'importer legge davvero (learning/importer.py, load_source):
+# vanno preservati sempre. Ogni altro foglio e' documentazione o residuo.
+FOGLI_LETTI = {
+    "Programma Lezioni", "Percorso MVP", "Grammatica",
+    "Vocabolario", "Comunicazione", "Liste",
 }
 
-MODELLO_DATI = [
-    ("dim_area_lezione", "mapping_area_lezione", "Liste (col. Area Didattica)", "Tabella dimensione codice→etichetta. Prefisso dim_ minuscolo: Postgres abbassa gli identificatori non virgolettati."),
-    ("dim_tipologia", "mapping_tipologia", "Liste (col. Tipologia Lezione)", "Rinominata."),
-    ("dim_livello", "mapping_livello", "Liste (col. Livello Linguistico)", "Rinominata."),
-    ("dim_difficolta_lezione", "mapping_difficolta_lezione", "Liste (col. Difficoltà)", "Rinominata, senza accento: un identificatore accentato andrebbe virgolettato in ogni query Postgres."),
-    ("dim_stato_lezione", "learning_statolezione", "Liste (col. Stato della Lezione)", "Rinominata: tiene i valori DA_SVILUPPARE / DA_SVILUPPARE_MVP / PUBBLICATA."),
-    ("learning_lezione", "—", "Programma Lezioni", "Rimosse le colonne priorita, importanza_mvp_id e fase_roadmap."),
-    ("learning_prerequisito", "—", "— (eliminata)", "ELIMINATA: vedi nota in fondo."),
-    ("struttura_lezione", "learning_sezionelezione", "Struttura_Lezione", "Rinominata: è la struttura della lezione."),
-    ("struttura_quiz", "learning_quiz", "Struttura_Quiz", "Rinominata."),
-    ("struttura_quiz_guidato", "learning_quesito (parte guidata)", "struttura_quiz_guidato", "Nuova, da separazione di learning_quesito."),
-    ("struttura_quiz_finale", "learning_quesito (parte finale)", "struttura_quiz_finale", "Nuova, da separazione di learning_quesito."),
-    ("user_progress", "learning_progresso", "—", "Rinominata. Popolata dagli utenti, non dal workbook. Rimossa la colonna minuti_effettivi: valeva 0 su ogni riga."),
-    ("user_profile", "learning_user", "—", "Rinominata. Rimossi i permessi granulari di Django: via le tabelle ponte learning_user_groups e learning_user_user_permissions e la colonna date_joined."),
-    ("learning_importanza", "learning_importanza", "— (eliminata)", "ELIMINATA con la colonna learning_lezione.priorita."),
+# Fogli da rimuovere. I primi cinque erano una copia dello schema del database;
+# gli ultimi due contenevano il ragionamento didattico e la roadmap di prodotto,
+# ora in Doc/Logica_Didattica.md.
+FOGLI_OBSOLETI = [
+    "Modello Dati",
+    "Struttura_Lezione",
+    "Struttura_Quiz",
+    "struttura_quiz_guidato",
+    "struttura_quiz_finale",
+    "Logica Didattica",
+    "Roadmap",
+    "Pronuncia",  # solo nella vecchia versione con audio del workbook
 ]
-
-NOTA_PREREQUISITI = (
-    "I 119 archi prerequisito non bloccavano nulla: le lezioni sono sempre state tutte accessibili, e il grafo "
-    "serviva solo a mostrare un consiglio («Segue X», «prerequisiti mancanti»). A fronte di questo, costava una "
-    "tabella ponte, una M2M Lezione<->Lezione, la validazione del DAG in services.py e una colonna nel workbook. "
-    "Rimosso tutto: l'ordine con cui affrontare le lezioni resta espresso da ordine_mvp (1..29 sul percorso MVP) e "
-    "da ordine_percorso (1..98 sul programma completo). Se un domani servira' un vero blocco per prerequisiti, si "
-    "reintroduce allora, su un prodotto gia' avviato."
-)
-
-
-def _scrivi_foglio(wb, nome, titolo, sottotitolo, righe, posizione=None):
-    if nome in wb.sheetnames:
-        del wb[nome]
-    ws = wb.create_sheet(nome) if posizione is None else wb.create_sheet(nome, posizione)
-    ws["A1"] = titolo
-    ws["A1"].font = TITLE
-    ws["A2"] = sottotitolo
-    ws["A2"].font = SUB
-    ws["A2"].alignment = WRAP
-    ws.row_dimensions[2].height = 30
-    for i, intestazione in enumerate(COLS, start=1):
-        cella = ws.cell(row=4, column=i, value=intestazione)
-        cella.font, cella.fill, cella.alignment = HEAD, FILL, WRAP
-    for r, riga in enumerate(righe, start=5):
-        for i, valore in enumerate(riga, start=1):
-            cella = ws.cell(row=r, column=i, value=valore)
-            cella.font, cella.alignment = BODY, WRAP
-    for i, larghezza in enumerate(WIDTHS, start=1):
-        ws.column_dimensions[get_column_letter(i)].width = larghezza
-    ws.freeze_panes = "A5"
-    return ws
 
 
 def _elimina_colonna(ws, intestazione, riga_intestazioni=4):
@@ -160,30 +111,19 @@ def aggiorna(percorso):
             "tabella learning_importanza."
         )
 
-    for nome, (titolo, sottotitolo, righe) in SHEETS.items():
-        _scrivi_foglio(wb, nome, titolo, sottotitolo, righe)
-    modifiche.append("Aggiunti/aggiornati 4 fogli di struttura")
+    for nome in FOGLI_OBSOLETI:
+        # Cintura di sicurezza: un foglio letto dall'importer non si tocca mai,
+        # qualunque cosa dica la lista qui sopra.
+        if nome in wb.sheetnames and nome not in FOGLI_LETTI:
+            del wb[nome]
+            modifiche.append(f"Rimosso foglio «{nome}» (non letto da nessuna parte del codice)")
 
-    ws = _scrivi_foglio(
-        wb, "Modello Dati",
-        "MODELLO DATI — corrispondenza fogli / tabelle Neon",
-        "Stato dopo la migration learning.0009. Se una struttura cambia su Neon va aggiornata anche qui.",
-        MODELLO_DATI, posizione=1,
-    )
-    for i, intestazione in enumerate(["Tabella Neon (attuale)", "Nome precedente", "Foglio di riferimento", "Note"], start=1):
-        cella = ws.cell(row=4, column=i, value=intestazione)
-        cella.font, cella.fill, cella.alignment = HEAD, FILL, WRAP
-    riga = len(MODELLO_DATI) + 6
-    ws.cell(row=riga, column=1, value="Perché learning_prerequisito è stata eliminata").font = Font(name="Arial", size=11, bold=True)
-    cella = ws.cell(row=riga + 1, column=1, value=NOTA_PREREQUISITI)
-    cella.font, cella.alignment = BODY, WRAP
-    ws.merge_cells(start_row=riga + 1, start_column=1, end_row=riga + 5, end_column=4)
-    for colonna, larghezza in zip("ABCD", [30, 34, 46, 74]):
-        ws.column_dimensions[colonna].width = larghezza
-    modifiche.append("Aggiunto foglio «Modello Dati»")
+    mancanti = FOGLI_LETTI - set(wb.sheetnames)
+    if mancanti:
+        raise SystemExit(f"ERRORE: {percorso} non ha i fogli richiesti dall'importer: {', '.join(sorted(mancanti))}")
 
     wb.save(percorso)
-    return modifiche
+    return modifiche or ["Nessuna modifica: il file era già allineato"]
 
 
 if __name__ == "__main__":

@@ -1,8 +1,7 @@
 """Verifica i permessi a livello di route/API: consultazione libera, scrittura solo autenticata."""
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APIClient, APITestCase
 from learning.importer import import_content
-from learning.models import Progresso, QuesitoFinale, QuesitoGuidato, User
+from learning.models import Progresso, QuesitoFinale, QuesitoGuidato, Token, User
 
 
 FIXTURE = "fixtures/contenuti_minimi.json"

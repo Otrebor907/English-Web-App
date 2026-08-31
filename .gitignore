@@ -11,3 +11,6 @@ frontend/dist/
 .hallmark/
 .claude/
 backend/scripts/__pycache__/
+
+# Log generati da avvia-sito.command
+.logs/

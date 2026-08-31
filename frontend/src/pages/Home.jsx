@@ -24,6 +24,12 @@ export default function Home() {
           {assigned.some(item => item.stato === 'completata') && <> — {assigned.filter(item => item.stato === 'completata').length} completate</>}.
         </p>
       )}
+      {/* se l'utente non è loggato mostrare frase*/}
+      {user && assigned?.length === 0 && (
+        <p className="home-summary">
+          hai 0 lezioni assegnate al tuo percorso. Registrati per iniziare a seguire le lezioni.
+        </p>
+      )}
     </section>
     <section className="home-open">
       <h2>Le lezioni sono aperte a tutti.</h2>

@@ -6,11 +6,10 @@ from django.conf import settings
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase, TestCase
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
 
 from learning.importer import import_content, load_source
-from learning.models import Lezione, Progresso, QuesitoFinale, StrutturaQuiz, User
+from learning.models import Lezione, Progresso, QuesitoFinale, StrutturaQuiz, Token, User
 from learning.services import record_final_score
 
 

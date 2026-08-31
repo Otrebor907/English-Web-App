@@ -9,12 +9,21 @@ import { Loader, ErrorState } from '../components/Feedback'
 
 // Catalogo completo delle lezioni (rotta "/lezioni") con filtri a cascata
 // Area → Categoria e raggruppamenti che si adattano al filtro attivo.
+
+ // !! Note:
+ // Dobbiamo immaginare Lesson come un oggetto con queste proprietà: e tutte le variabili sotto (ueser, loading)
 export default function Lessons() {
   const { user } = useAuth()
+  // Crea questa costante con questi 3 dati all'intero
+  // useLoad è un assitente che serve per far una telefono al serve (github o altri strumenti) e prendere i dati, in questo caso le lezioni.
+  // in prima battuta abremo quindi 
+     // loading = true, data = null, error = null, viene creato il componente Loader che mostra un messaggio di caricamento, e se c'è un errore viene creato il componente ErrorState che mostra il messaggio di errore.
   const { loading, data, error } = useLoad(() => api('/lezioni/indice/'))
   const [area, setArea] = useState('TUTTE')
   const [categoria, setCategoria] = useState('TUTTE')
+  // Se stiamo ancora caricando i dati, mostriamo il componente Loader
   if (loading) return <Loader />
+  // Se c'è stato un errore, mostriamo il componente ErrorState con il messaggio di errore
   if (error) return <ErrorState message={error} />
 
   const lessons = Object.entries(data).flatMap(([code, items]) => items.map(item => ({ ...item, area: code })))
@@ -45,7 +54,7 @@ export default function Lessons() {
           : "Consultabili gratuitamente, senza account. Registrati per assegnarle al tuo percorso e salvare i progressi."}</p>
       </div>
       {user && <div className="progress-ring" role="img" aria-label={`${assignedCount} lezioni nel tuo percorso`}>
-        <strong>{assignedCount}</strong><span>nel percorso</span>
+        <strong>{assignedCount}</strong><span><center>lezioni salvate</center></span>
       </div>}
     </div>
 

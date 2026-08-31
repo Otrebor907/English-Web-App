@@ -1,7 +1,6 @@
 """Aggiornamento email e cambio password dal profilo utente."""
-from rest_framework.authtoken.models import Token
 from rest_framework.test import APITestCase
-from learning.models import User
+from learning.models import Token, User
 
 
 class ProfileUpdateTests(APITestCase):

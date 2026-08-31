@@ -44,7 +44,13 @@ def _sheet_rows(sheet):
     headers = [str(value).strip() if value is not None else "" for value in rows[0]]
     return [{headers[i]: value for i, value in enumerate(row) if headers[i]} for row in rows[1:] if any(value is not None for value in row)]
 
-
+# Funzione simile a _sheet_rows ma permette di specificare l'indice della riga di intestazione e limiti di colonna/riga.
+# esempio output:
+# righe[2]  →  riga 7 del foglio  →  GRA-A1-003
+#   {
+#       'ID Lezione': 'GRA-A1-003',
+#       'Area Didattica': 'Grammatica'ecc
+#   }
 def _sheet_rows_at(sheet, header_row, max_column=None, max_row=None):
     rows = sheet.iter_rows(min_row=header_row, max_row=max_row, values_only=True, max_col=max_column)
     headers = [str(value).strip() if value is not None else "" for value in next(rows)]
@@ -148,6 +154,7 @@ def _load_programma_workbook(workbook):
         mvp["GRA-A1-008"] = {"ordine_mvp": insertion_order}
         normalized_mvp = True
 
+    # Creata lista di lezioni con campi normalizzati e mappati, senza contenuti definitivi. (4 è il rigo di intestazione, 17 è l'ultima colonna utile)
     lessons = []
     for row in _sheet_rows_at(workbook["Programma Lezioni"], 4, 17):
         lesson_id = row.get("ID Lezione")
