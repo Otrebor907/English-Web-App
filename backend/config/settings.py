@@ -65,7 +65,13 @@ if os.getenv("POSTGRES_DB"):
         "HOST": os.getenv("POSTGRES_HOST", "localhost"),
         "PORT": os.getenv("POSTGRES_PORT", "5432"),
         # --- righe nuove, necessarie per Neon ---
-        "OPTIONS": {"sslmode": os.getenv("POSTGRES_SSLMODE", "require")},
+        # connect_timeout: senza questo, se la porta 5432 e' filtrata dalla rete
+        # (wifi aziendale/pubblico) la connessione resta appesa all'infinito e
+        # "manage.py migrate" si blocca senza dire nulla.
+        "OPTIONS": {
+            "sslmode": os.getenv("POSTGRES_SSLMODE", "require"),
+            "connect_timeout": int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "10")),
+        },
         # Neon sospende il compute dopo 5 minuti di inattività (scale-to-zero,
         # non disattivabile sul piano gratuito). Senza il controllo di salute
         # Django riuserebbe una connessione ormai chiusa dal server.

@@ -29,21 +29,6 @@ REQUIRED_LESSON_FIELDS = {
 REQUIRED_COMPLETE_SOURCE_KEYS = {"liste", "lezioni", "sezioni", "quiz"}
 
 
-def _json_cell(value, default):
-    if value in (None, ""):
-        return default
-    if isinstance(value, (dict, list)):
-        return value
-    return json.loads(value)
-
-
-def _sheet_rows(sheet):
-    rows = list(sheet.values)
-    if not rows:
-        return []
-    headers = [str(value).strip() if value is not None else "" for value in rows[0]]
-    return [{headers[i]: value for i, value in enumerate(row) if headers[i]} for row in rows[1:] if any(value is not None for value in row)]
-
 # Funzione simile a _sheet_rows ma permette di specificare l'indice della riga di intestazione e limiti di colonna/riga.
 # esempio output:
 # righe[2]  →  riga 7 del foglio  →  GRA-A1-003
@@ -216,6 +201,15 @@ def _load_programma_workbook(workbook):
     }
 
 
+# Le due sole fonti importabili sono il workbook del programma e il JSON.
+# Il workbook porta il catalogo e lo scheletro delle pagine (sezioni TODO_FONTE,
+# nessun quiz); il JSON serve alle fixture dei test, che hanno invece contenuti
+# e quesiti completi. I testi definitivi delle lezioni vere non passano da qui:
+# arrivano dai brief markdown, con il comando pubblica_da_markdown
+# (learning/markdown_source.py).
+NATIVE_SHEETS = {"Programma Lezioni", "Percorso MVP", "Grammatica", "Vocabolario", "Comunicazione", "Liste"}
+
+
 def load_source(path):
     path = Path(path)
     if path.suffix.lower() == ".json":
@@ -226,40 +220,13 @@ def load_source(path):
     if path.suffix.lower() not in {".xlsx", ".xlsm"}:
         raise ValueError("Formato non supportato: usare .json, .xlsx o .xlsm")
     workbook = load_workbook(path, data_only=True, read_only=True)
-    native_sheets = {"Programma Lezioni", "Percorso MVP", "Grammatica", "Vocabolario", "Comunicazione", "Liste"}
-    if native_sheets.issubset(workbook.sheetnames):
-        return _load_programma_workbook(workbook)
-    required = {"Liste", "Lezioni", "Sezioni", "Quiz"}
-    missing = required - set(workbook.sheetnames)
+    missing = NATIVE_SHEETS - set(workbook.sheetnames)
     if missing:
-        raise ValueError(f"Fogli Excel mancanti: {', '.join(sorted(missing))}")
-    lists = defaultdict(list)
-    for row in _sheet_rows(workbook["Liste"]):
-        lists[str(row["categoria"]).lower()].append({"code": str(row["code"]), "nome": str(row["nome"])})
-    lessons = []
-    for row in _sheet_rows(workbook["Lezioni"]):
-        normalized = dict(row)
-        normalized["competenze"] = _json_cell(row.get("competenze"), [])
-        normalized["errori_tipici"] = _json_cell(row.get("errori_tipici"), [])
-        lessons.append(normalized)
-    sections = []
-    for row in _sheet_rows(workbook["Sezioni"]):
-        row["contenuto"] = _json_cell(row.get("contenuto"), {})
-        sections.append(row)
-    questions_by_quiz = defaultdict(list)
-    for row in _sheet_rows(workbook["Quiz"]):
-        key = (row["lezione_id"], row["modalita"])
-        questions_by_quiz[key].append({
-            "ordine": row["ordine"], "tipo": row["tipo"], "testo": row["testo"],
-            "opzioni": _json_cell(row.get("opzioni"), []), "risposta_corretta": row["risposta_corretta"],
-            "spiegazione": row["spiegazione"],
-        })
-    quizzes = [{"lezione_id": key[0], "modalita": key[1], "titolo": f"{key[1].title()}", "quesiti": value} for key, value in questions_by_quiz.items()]
-    return _with_expected_counts({
-        "liste": dict(lists), "lezioni": lessons,
-        "sezioni": sections, "quiz": quizzes,
-        "meta": {"formato": "excel_normalizzato"},
-    })
+        raise ValueError(
+            f"Fogli Excel mancanti: {', '.join(sorted(missing))}. "
+            f"Il file deve essere il workbook del programma, con i fogli: {', '.join(sorted(NATIVE_SHEETS))}"
+        )
+    return _load_programma_workbook(workbook)
 
 
 def collect_source_structure_errors(data):
@@ -382,7 +349,9 @@ def source_report(data):
 
 @transaction.atomic
 def import_content(path):
+    # Produce il dizionario
     data = load_source(path)
+    # controlla o ferma il ritmo se ci sono errori di struttura
     validate_source(data)
     for key, model in LOOKUP_MODELS.items():
         source_codes = []

@@ -3,7 +3,7 @@ from learning.importer import import_content, load_source, source_report, valida
 
 
 class Command(BaseCommand):
-    help = "Importa in modo idempotente contenuti JSON/Excel e valida il DAG"
+    help = "Importa in modo idempotente il catalogo da un workbook .xlsx o da un JSON, validandolo prima di scrivere"
 
     def add_arguments(self, parser):
         parser.add_argument("file")
