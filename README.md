@@ -80,7 +80,7 @@ Le colonne `Prerequisiti`, `Lezione Precedente` e `Lezione Successiva` esistono 
 
 Il workbook è un programma editoriale: non contiene i testi definitivi né i quesiti. Le sezioni che ne derivano sono marcate `TODO_FONTE`, non viene creato alcun quiz, e l'import non trasforma `Da sviluppare (MVP)` in `Pubblicata`.
 
-Il foglio `Percorso MVP` contiene materialmente 28 righe. In applicazione dell'aggiornamento di perimetro, il parser inserisce `GRA-A1-008` all'ordine MVP 11 e incrementa di uno gli ordini successivi, arrivando a 29. Il report segnala sempre questa normalizzazione; quando il workbook con 29 righe sarà disponibile non verrà applicata.
+Il foglio `Percorso MVP` contiene 29 righe, con `GRA-A1-008` all'ordine 11. Fino al 01/09/2026 ne conteneva 28 e il parser inseriva la riga mancante da solo: quella normalizzazione è stata rimossa, la riga è stata aggiunta al workbook. Se il foglio torna a 28 righe la validazione fallisce con `Percorso MVP incompleto`, invece di ripararlo in silenzio.
 
 ### 2. I brief markdown: i testi definitivi
 
@@ -167,6 +167,7 @@ I contenuti si pubblicano con `importa_contenuti` e `pubblica_da_markdown`; i da
 
 ## Documentazione
 
+- [Doc/Importazione_Excel_Neon.md](Doc/Importazione_Excel_Neon.md) — il percorso completo di una lezione dal foglio Excel alle righe su Neon, variabile per variabile e query per query.
 - [Doc/Funzionamento.md](Doc/Funzionamento.md) — come è fatto il progetto, file per file.
 - [Doc/Fasi_di_Costruzione.md](Doc/Fasi_di_Costruzione.md) — storia delle decisioni e delle migration.
 - [Doc/Logica_Didattica.md](Doc/Logica_Didattica.md) — perché il programma è strutturato così, e la roadmap di prodotto.
