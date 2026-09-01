@@ -14,3 +14,7 @@ backend/scripts/__pycache__/
 
 # Log generati da avvia-sito.command
 .logs/
+
+# File di lock creati da Excel/LibreOffice mentre un documento è aperto
+~$*
+.~lock.*
